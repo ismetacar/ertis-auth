@@ -16,8 +16,8 @@ def create_sanic_app(settings):
     from src.api.healthcheck import init_healthcheck_api
     init_healthcheck_api(app, settings)
 
-    from src.api.ip_resolver import init_ip_resolver_api
-    init_ip_resolver_api(app, settings)
+    #: from src.api.ip_resolver import init_ip_resolver_api
+    #: init_ip_resolver_api(app, settings)
 
     from src.api.tokens import init_token_api
     init_token_api(app, settings)
