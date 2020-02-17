@@ -1,6 +1,6 @@
 from functools import wraps
 
-from src.utils.mmdb_helpers import get_location_info
+#: from src.utils.mmdb_helpers import get_location_info
 
 
 def resolve_ip():
