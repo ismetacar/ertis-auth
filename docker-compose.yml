@@ -1,0 +1,15 @@
+version: '3'
+
+services:
+  mongo:
+    image: mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - /tmp/db:/data/db:rw
+  blupoint_auth:
+    build: .
+    links:
+      - mongo
+    ports:
+      - "8888:8888"

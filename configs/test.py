@@ -1,0 +1,23 @@
+test_config = {
+    "environment": "local",
+    "mongo_connection_string": "mongodb://localhost/blupoint_auth_test",
+    "api_version": "v1",
+    "application_secret": "AtqVaL11EHVPEpbu2mr0yZgKXj1BnRj0",
+    "token_ttl": 60,
+    "refresh_token_ttl": 600,
+    "default_database": "blupoint_auth_test",
+    "verify_token": True,
+    "error_handler": True,
+    "debug": True,
+    "host": "0.0.0.0",
+    "port": 8888,
+    "sentry_activate": False,
+    "sentry_connection_string": "",
+    "mail_activate": False,
+    "mail_server": "smtp.googlemail.com",
+    "mail_port": 465,
+    "mail_username": "",
+    "mail_password": "",
+    "mail_use_tls": False,
+    "mail_use_ssl": True
+}
