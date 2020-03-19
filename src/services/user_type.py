@@ -42,7 +42,7 @@ class UserTypeService(object):
         return resource
 
     async def get_user_type(self, membership_id, user_type_id=None):
-        return await find_user_type(membership_id, self.db, user_type_id=user_type_id, raise_exec=False)
+        return await find_user_type(membership_id, self.db, user_type_id=user_type_id, raise_exec=True)
 
     async def update_user_type(self, membership_id, user_type_id, data, user):
         resource = await self.get_user_type(membership_id, user_type_id=user_type_id)
