@@ -3,9 +3,16 @@ import datetime
 
 from bson import ObjectId
 
-from src.resources.user_types.user_types import slugify_name, set_additional_parameters_to_false, \
-    fill_min_max_fields_if_not_given, ensure_user_type_not_exists, find_user_type, update_user_type_with_body, \
-    disallow_update_fields, regenerate_slug_by_name
+from src.resources.user_types.user_types import (
+    slugify_name,
+    set_additional_parameters_to_false,
+    fill_min_max_fields_if_not_given,
+    ensure_user_type_not_exists,
+    find_user_type,
+    update_user_type_with_body,
+    disallow_update_fields,
+    regenerate_slug_by_name
+)
 from src.resources.user_types.validation import validate
 from src.utils.errors import ErtisError
 

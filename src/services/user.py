@@ -88,8 +88,8 @@ class UserService(object):
             )
         await remove_user(self.db, resource_id, user['membership_id'])
 
-    async def query_users(self, where, select, limit, skip, sort):
-        users, count = await query(self.db, where, select, limit, skip, sort, 'users')
+    async def query_users(self, membership_id, where, select, limit, skip, sort):
+        users, count = await query(self.db, membership_id, where, select, limit, skip, sort, 'users')
 
         users = pop_critical_user_fields(users)
         return users, count

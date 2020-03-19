@@ -190,6 +190,12 @@ class ErtisBearerTokenService(object):
         user_permissions = user_role.get('permissions', []) if user_role else []
         user['role_permissions'] = user_permissions
 
+        membership = await self.db.memberships.find_one({
+            '_id': maybe_object_id(user['membership_id'])
+        })
+
+        user['membership'] = membership
+        user.pop('membership_id', None)
         user.pop('password', None)
         user.pop('decoded_token', None)
         return user

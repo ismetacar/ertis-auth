@@ -29,7 +29,7 @@ QUERY_BODY_SCHEMA = {
 
 def normalize_ids(where):
     if not where:
-        return
+        return {}
 
     if '_id' in where:
         if type(where['_id']) == dict and "$in" in where['_id']:
@@ -50,9 +50,19 @@ def _pre_process_where(where):
     return normalized_where
 
 
-async def query(db, where=None, select=None, limit=None, sort=None, skip=None, collection=None):
+async def query(db, membership_id=None, where=None, select=None, limit=None, sort=None, skip=None, collection=None):
     try:
         where = _pre_process_where(where)
+        if not membership_id:
+            raise ErtisError(
+                err_msg="membership_id not passed to query",
+                err_code="errors.internalServerError",
+                status_code=500
+            )
+            
+        where.update({
+            'membership_id': membership_id
+        })
 
         if not select:
             select = None
@@ -60,20 +70,20 @@ async def query(db, where=None, select=None, limit=None, sort=None, skip=None, c
         if not limit or limit > 500:
             limit = 200
 
-        cur = db[collection].find(where, select)
+        cursor = db[collection].find(where, select)
 
-        total_count = await cur.explain()
+        total_count = await cursor.explain()
 
         if skip:
-            cur.skip(int(skip))
+            cursor.skip(int(skip))
 
         if limit:
-            cur.limit(int(limit))
+            cursor.limit(int(limit))
 
         if sort:
-            cur.sort(sort)
+            cursor.sort(sort)
 
-        items = await cur.to_list(None)
+        items = await cursor.to_list(None)
 
         return items, total_count["executionStats"]["nReturned"]
 

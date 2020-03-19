@@ -59,5 +59,5 @@ class RoleService(object):
     async def delete_role(self, resource_id, user):
         await remove_role(self.db, resource_id, user['membership_id'])
 
-    async def query_roles(self, where, select, limit, skip, sort):
-        return await query(self.db, where, select, limit, skip, sort, 'roles')
+    async def query_roles(self, membership_id, where, select, limit, skip, sort):
+        return await query(self.db, membership_id, where, select, limit, skip, sort, 'roles')

@@ -62,7 +62,7 @@ def init_applications_api(app, settings):
     async def query_applications(request, membership_id, **kwargs):
         await ensure_membership_is_exists(app.db, membership_id, request.ctx.user)
         where, select, limit, sort, skip = query_helpers.parse(request)
-        applications, count = await app.application_service.query_applications(where, select, limit, sort, skip)
+        applications, count = await app.application_service.query_applications(membership_id, where, select, limit, sort, skip)
         response_json = json.loads(json.dumps({
             'data': {
                 'items': applications,

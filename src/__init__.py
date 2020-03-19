@@ -37,6 +37,9 @@ def create_sanic_app(settings):
     from src.api.roles import init_roles_api
     init_roles_api(app, settings)
 
+    from src.api.events import init_events_api
+    init_events_api(app, settings)
+
     from src.api.routes import init_routes_api
     init_routes_api(app, settings)
 

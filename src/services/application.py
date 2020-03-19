@@ -58,5 +58,5 @@ class ApplicationService(object):
     async def delete_application(self, application_id, user):
         await remove_application(self.db, user['membership_id'], application_id)
 
-    async def query_applications(self, where, select, limit, skip, sort):
-        return await query(self.db, where, select, limit, skip, sort, 'applications')
+    async def query_applications(self, membership_id, where, select, limit, skip, sort):
+        return await query(self.db, membership_id, where, select, limit, skip, sort, 'applications')

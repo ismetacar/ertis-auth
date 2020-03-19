@@ -61,7 +61,7 @@ def init_users_api(app, settings):
     async def query_users(request, membership_id, *args, **kwargs):
         await ensure_membership_is_exists(app.db, membership_id, request.ctx.user)
         where, select, limit, sort, skip = query_helpers.parse(request)
-        users, count = await app.user_service.query_users(where, select, limit, sort, skip)
+        users, count = await app.user_service.query_users(membership_id, where, select, limit, sort, skip)
 
         response_json = json.loads(json.dumps({
             'data': {

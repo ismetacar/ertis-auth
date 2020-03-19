@@ -39,7 +39,7 @@ def init_user_types_api(app, settings):
 
     # endregion
 
-    # region Update User
+    # region Update User Type
     @app.route('/api/v1/memberships/<membership_id>/user-types/<user_type_id>', methods=['PUT'])
     @authorized(app, settings, methods=['PUT'])
     async def update_user_type(request, membership_id, user_type_id, *args, **kwargs):
