@@ -1,24 +1,11 @@
-import copy
-import datetime
 import json
-
 from sanic import response
-
-from src.plugins.authorization import authorized
-from src.plugins.validator import validated
-from src.resources.applications import (
-    ensure_name_is_unique_in_membership,
-    generate_app_secrets,
-    find_application,
-    pop_non_updatable_fields,
-    update_application_with_body,
-    remove_application,
-    APPLICATION_CREATE_SCHEMA
-)
-from src.resources.generic import query, QUERY_BODY_SCHEMA, ensure_membership_is_exists
 from src.utils import query_helpers
-from src.utils.errors import BlupointError
+from src.plugins.validator import validated
 from src.utils.json_helpers import bson_to_json
+from src.plugins.authorization import authorized
+from src.resources.applications.applications import APPLICATION_CREATE_SCHEMA
+from src.resources.generic import QUERY_BODY_SCHEMA, ensure_membership_is_exists
 
 
 def init_applications_api(app, settings):
@@ -27,22 +14,11 @@ def init_applications_api(app, settings):
     @authorized(app, settings, methods=['POST'], required_permission='applications.create')
     @validated(APPLICATION_CREATE_SCHEMA)
     async def create_application(request, membership_id, **kwargs):
-        await ensure_membership_is_exists(app.db, membership_id, kwargs.get('user'))
+        await ensure_membership_is_exists(app.db, membership_id, request.ctx.user)
 
-        application = request.json
-        application['membership_id'] = membership_id
-        application['sys'] = {
-            'created_at': datetime.datetime.utcnow(),
-            'created_by': kwargs.get('user')['username']
-        }
-
-        await ensure_name_is_unique_in_membership(app.db, application)
-        application = generate_app_secrets(application)
-        app_id = await app.db.applications.insert_one(application)
-        application['_id'] = str(app_id.inserted_id)
-
-        application = json.loads(json.dumps(application, default=bson_to_json))
-        return response.json(application, 201)
+        body = request.json
+        resource = await app.application_service.create_application(body, request.ctx.user)
+        return response.json(json.loads(json.dumps(resource, default=bson_to_json)), 201)
 
     # endregion
 
@@ -50,12 +26,9 @@ def init_applications_api(app, settings):
     @app.route('/api/v1/memberships/<membership_id>/applications/<application_id>', methods=['GET'])
     @authorized(app, settings, methods=['GET'], required_permission='applications.read')
     async def get_application(request, membership_id, application_id, **kwargs):
-        await ensure_membership_is_exists(app.db, membership_id, kwargs.get('user'))
-
-        application = await find_application(app.db, membership_id, application_id)
-        application = json.loads(json.dumps(application, default=bson_to_json))
-
-        return response.json(application)
+        await ensure_membership_is_exists(app.db, membership_id, request.ctx.user)
+        resource = await app.application_service.get_application(application_id, request.ctx.user)
+        return response.json(json.loads(json.dumps(resource, default=bson_to_json)))
 
     # endregion
 
@@ -63,32 +36,11 @@ def init_applications_api(app, settings):
     @app.route('/api/v1/memberships/<membership_id>/applications/<application_id>', methods=['PUT'])
     @authorized(app, settings, methods=['PUT'], required_permission='applications.update')
     async def update_application(request, membership_id, application_id, **kwargs):
-        await ensure_membership_is_exists(app.db, membership_id, kwargs.get('user'))
-        application = await find_application(app.db, membership_id, application_id)
-
-        _application = copy.deepcopy(application)
-
+        await ensure_membership_is_exists(app.db, membership_id, request.ctx.user)
         body = request.json
-        provided_body = pop_non_updatable_fields(body)
+        resource = await app.application_service.update_application(application_id, body, request.ctx.user)
 
-        application.update(provided_body)
-        if application == _application:
-            raise BlupointError(
-                err_msg="Identical document error",
-                err_code="errors.identicalDocument",
-                status_code=409
-            )
-
-        application['sys'].update({
-            'modified_at': datetime.datetime.utcnow(),
-            'modified_by': kwargs.get('user')['username']
-        })
-
-        provided_body['sys'] = application['sys']
-        application = await update_application_with_body(app.db, application_id, membership_id, provided_body)
-        application = json.loads(json.dumps(application, default=bson_to_json))
-
-        return response.json(application)
+        return response.json(json.loads(json.dumps(resource, default=bson_to_json)), 200)
 
     # endregion
 
@@ -96,8 +48,8 @@ def init_applications_api(app, settings):
     @app.route('/api/v1/memberships/<membership_id>/applications/<application_id>', methods=['DELETE'])
     @authorized(app, settings, methods=['DELETE'], required_permission='applications.delete')
     async def delete_application(request, membership_id, application_id, **kwargs):
-        await ensure_membership_is_exists(app.db, membership_id, kwargs.get('user'))
-        await remove_application(app.db, membership_id, application_id)
+        await ensure_membership_is_exists(app.db, membership_id, request.ctx.user)
+        await app.application_service.delete_application(application_id, request.ctx.user)
 
         return response.json({}, 204)
 
@@ -108,9 +60,9 @@ def init_applications_api(app, settings):
     @authorized(app, settings, methods=['POST'], required_permission='applications.read')
     @validated(QUERY_BODY_SCHEMA)
     async def query_applications(request, membership_id, **kwargs):
-        await ensure_membership_is_exists(app.db, membership_id, kwargs.get('user'))
+        await ensure_membership_is_exists(app.db, membership_id, request.ctx.user)
         where, select, limit, sort, skip = query_helpers.parse(request)
-        applications, count = await query(app.db, where, select, limit, skip, sort, 'applications')
+        applications, count = await app.application_service.query_applications(where, select, limit, sort, skip)
         response_json = json.loads(json.dumps({
             'data': {
                 'items': applications,
@@ -118,6 +70,6 @@ def init_applications_api(app, settings):
             }
         }, default=bson_to_json))
 
-        return response.json(response_json)
+        return response.json(response_json, 200)
 
     # endregion

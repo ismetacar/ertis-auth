@@ -7,7 +7,7 @@ def resolve_ip():
     def decorator(f):
         @wraps(f)
         async def decorated_function(request, *args, **kwargs):
-            #: ip_address = request.headers.get('x-blupoint-ip')
+            #: ip_address = request.headers.get('x-ertis-ip')
             #: kwargs['ip_address'] = ip_address
             #: if ip_address:
             #:     try:

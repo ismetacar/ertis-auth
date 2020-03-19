@@ -1,5 +1,5 @@
 import logging
-from src.utils.errors import BlupointError
+from src.utils.errors import ErtisError
 
 
 def parse_boolean(val, default=False):
@@ -32,7 +32,7 @@ def get_select(request):
         return _json
     except Exception as ex:
         logging.error(ex)
-        raise BlupointError(
+        raise ErtisError(
             err_code="errors.BadJsonGiven",
             err_msg="Body Json is Invalid",
             status_code=400
@@ -45,7 +45,7 @@ def get_where(request):
         return _json
     except Exception as ex:
         logging.error(ex)
-        raise BlupointError(
+        raise ErtisError(
             err_code="errors.BadJsonGiven",
             err_msg="Body Json is Invalid",
             status_code=400

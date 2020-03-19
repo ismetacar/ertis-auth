@@ -80,7 +80,7 @@ def parse_boolean(json_dict):
 
 
 def convert_custom_header_json(headers):
-    custom = headers.get("x-blupoint-custom")
+    custom = headers.get("x-ertis-custom")
     if not custom:
         return
     try:

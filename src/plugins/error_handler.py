@@ -3,7 +3,7 @@ from sanic.exceptions import MethodNotSupported, NotFound, InvalidUsage
 from sanic.handlers import ErrorHandler
 from sanic_sentry import safe_getattr
 
-from src.utils.errors import BlupointError
+from src.utils.errors import ErtisError
 
 
 def _request_debug_info(request):
@@ -23,7 +23,7 @@ class CustomErrorHandler(ErrorHandler):
         self.sentry_client = sentry_client
 
     def default(self, request, exception):
-        if isinstance(exception, BlupointError):
+        if isinstance(exception, ErtisError):
             return response.json(
                 body={
                     'err_msg': exception.err_msg,

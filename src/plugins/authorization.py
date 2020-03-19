@@ -1,7 +1,7 @@
 from functools import wraps
 
 from src.resources.generic import ensure_token_is_not_revoked
-from src.utils.errors import BlupointError
+from src.utils.errors import ErtisError
 from src.utils.security_helpers import implies_any
 
 
@@ -9,13 +9,13 @@ def ensure_valid_token_provided(auth_header):
     try:
         token = auth_header.split(' ')[1]
         if auth_header.split(' ')[0] != 'Bearer':
-            raise BlupointError(
+            raise ErtisError(
                 err_code="errors.authorizationError",
                 err_msg="Invalid authorization header provided",
                 status_code=401
             )
     except Exception as e:
-        raise BlupointError(
+        raise ErtisError(
             err_msg="Invalid authorization header provided",
             err_code="errors.authorizationError",
             status_code=401,
@@ -32,7 +32,7 @@ async def ensure_user_is_permitted(db, user, required_permission):
     })
 
     if not user_role:
-        raise BlupointError(
+        raise ErtisError(
             err_code="errors.permissionDenied",
             err_msg="Permission denied for this action <{}>".format(required_permission),
             status_code=403
@@ -41,7 +41,7 @@ async def ensure_user_is_permitted(db, user, required_permission):
     user_permissions = user_role.get('permissions', [])
     has_permission = implies_any(user_permissions, required_permission)
     if not has_permission:
-        raise BlupointError(
+        raise ErtisError(
             err_code="errors.permissionDenied",
             err_msg="Permission denied for this action <{}>".format(required_permission),
             status_code=403
@@ -66,7 +66,7 @@ def authorized(app, settings, methods=None, required_permission=None):
             user = await app.bearer_token_service.validate_token(token, settings['application_secret'], verify=True)
 
             if not user or user['decoded_token']['rf'] is True:
-                raise BlupointError(
+                raise ErtisError(
                     err_code="errors.authorizationError",
                     err_msg="Invalid authorization header provided",
                     status_code=401
@@ -76,6 +76,7 @@ def authorized(app, settings, methods=None, required_permission=None):
                 await ensure_user_is_permitted(app.db, user, required_permission)
 
             kwargs['user'] = user
+            request.ctx.user = user
             response = await f(request, *args, **kwargs)
             return response
 

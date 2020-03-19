@@ -5,7 +5,7 @@ from sanic.websocket import WebSocketProtocol
 from run import config_settings
 from src import create_sanic_app
 from tests import insert_mock_data
-
+#: TODO: hepsi silinecek bastan yazilacak
 # region Init Tests
 from tests.test_users import get_token
 
@@ -47,7 +47,7 @@ async def test_generate_token_with_valid_payload(client):
     }
 
     headers = {
-        'x-blupoint-alias': str(membership['_id'])
+        'x-ertis-alias': str(membership['_id'])
     }
 
     response = await client.post(
@@ -71,7 +71,7 @@ async def test_generate_token_with_invalid_membership_id(client):
     }
 
     headers = {
-        'x-blupoint-alias': 'invalid_membership_id'
+        'x-ertis-alias': 'invalid_membership_id'
     }
 
     response = await client.post(
@@ -89,7 +89,7 @@ async def test_generate_token_with_invalid_payload(client):
     }
 
     headers = {
-        'x-blupoint-alias': str(membership['_id'])
+        'x-ertis-alias': str(membership['_id'])
     }
 
     response = await client.post(
@@ -108,7 +108,7 @@ async def test_generate_token_with_invalid_password(client):
     }
 
     headers = {
-        'x-blupoint-alias': str(membership['_id'])
+        'x-ertis-alias': str(membership['_id'])
     }
 
     response = await client.post(
@@ -130,7 +130,7 @@ async def test_generate_token_with_not_allowed_method(client):
     }
 
     headers = {
-        'x-blupoint-alias': str(membership['_id'])
+        'x-ertis-alias': str(membership['_id'])
     }
 
     response = await client.put(
@@ -149,7 +149,7 @@ async def test_generate_token_should_user_updated_with_token(client):
     }
 
     headers = {
-        'x-blupoint-alias': str(membership['_id'])
+        'x-ertis-alias': str(membership['_id'])
     }
 
     token_response = await client.post(
@@ -188,7 +188,7 @@ async def test_refresh_token_with_valid_refreshable_token(client):
     }
 
     headers = {
-        'x-blupoint-alias': str(membership['_id'])
+        'x-ertis-alias': str(membership['_id'])
     }
 
     token_response = await client.post(
@@ -225,7 +225,7 @@ async def test_refresh_token_with_access_token(client):
     }
 
     headers = {
-        'x-blupoint-alias': str(membership['_id'])
+        'x-ertis-alias': str(membership['_id'])
     }
 
     token_response = await client.post(
@@ -260,7 +260,7 @@ async def test_refresh_token_with_invalid_refreshable_token(client):
     }
 
     headers = {
-        'x-blupoint-alias': str(membership['_id'])
+        'x-ertis-alias': str(membership['_id'])
     }
 
     token_response = await client.post(
@@ -296,7 +296,7 @@ async def test_verify_valid_token(client):
     }
 
     headers = {
-        'x-blupoint-alias': str(membership['_id'])
+        'x-ertis-alias': str(membership['_id'])
     }
 
     token_response = await client.post(
@@ -345,7 +345,7 @@ async def test_verify_invalid_token(client):
     }
 
     headers = {
-        'x-blupoint-alias': str(membership['_id'])
+        'x-ertis-alias': str(membership['_id'])
     }
 
     token_response = await client.post(
@@ -384,7 +384,7 @@ async def test_revoke_token(client):
     }
 
     headers = {
-        'x-blupoint-alias': str(membership['_id'])
+        'x-ertis-alias': str(membership['_id'])
     }
 
     token_response = await client.post(
@@ -417,7 +417,7 @@ async def test_revoked_token_should_be_invalid(client):
     }
 
     headers = {
-        'x-blupoint-alias': str(membership['_id'])
+        'x-ertis-alias': str(membership['_id'])
     }
 
     token_response = await client.post(
@@ -455,11 +455,11 @@ async def test_revoked_token_should_be_invalid(client):
 # region Reset Password Test
 async def test_reset_password(client):
     payload = {
-        'email': 'gunererd@blutv.com'
+        'email': 'john@domain.com'
     }
 
     headers = {
-        'x-blupoint-alias': str(membership['_id'])
+        'x-ertis-alias': str(membership['_id'])
     }
 
     reset_password_response = await client.post(
@@ -471,7 +471,7 @@ async def test_reset_password(client):
     assert reset_password_response.status == 404
 
     payload = {
-        'email': 'eguner@blutv.com'
+        'email': 'doe@domain.com'
     }
 
     reset_password_response = await client.post(
@@ -494,7 +494,7 @@ async def test_set_new_password(client):
     }
 
     headers = {
-        'x-blupoint-alias': str(membership['_id'])
+        'x-ertis-alias': str(membership['_id'])
     }
 
     reset_password_response = await client.post(

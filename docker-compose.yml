@@ -7,7 +7,7 @@ services:
       - "27017:27017"
     volumes:
       - /tmp/db:/data/db:rw
-  blupoint_auth:
+  ertis_auth:
     build: .
     links:
       - mongo

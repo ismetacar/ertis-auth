@@ -1,5 +1,5 @@
 import json
-
+#: TODO: hepsi silinecek bastan yazilacak
 import pytest
 from sanic.websocket import WebSocketProtocol
 

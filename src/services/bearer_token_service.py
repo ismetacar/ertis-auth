@@ -1,139 +1,205 @@
-import copy
 import datetime
-import hashlib
-import json
+
 import jwt
-from bson import ObjectId
-from jsonschema import validate, ValidationError
-from jwt import ExpiredSignatureError
-
-from src.utils.errors import BlupointError
-from src.utils import temporal_helpers
-from src.utils.json_helpers import bson_to_json, maybe_object_id
+import json
+import asyncio
+import hashlib
 from passlib.hash import bcrypt
-
-CREATE_TOKEN_SCHEMA = {
-    '$schema': 'http://json-schema.org/schema#',
-    'type': 'object',
-    'properties': {
-        'username': {
-            'type': 'string'
-        },
-        'password': {
-            'type': 'string'
-        }
-    },
-    'required': [
-        'username',
-        'password'
-    ]
-}
-
-REFRESH_TOKEN_SCHEMA = {
-    '$schema': 'http://json-schema.org/schema#',
-    'type': 'object',
-    'properties': {
-        'token': {
-            'type': 'string'
-        }
-    },
-    'required': [
-        'token'
-    ]
-}
-
-RESET_PASSWORD_SCHEMA = {
-    '$schema': 'http://json-schema.org/schema#',
-    'type': 'object',
-    'properties': {
-        'email': {
-            'type': 'string',
-            'format': 'email'
-        }
-    },
-    'required': [
-        'email'
-    ]
-}
-
-SET_PASSWORD_SCHEMA = {
-    '$schema': 'http://json-schema.org/schema#',
-    'type': 'object',
-    'properties': {
-        'email': {
-            'type': 'string',
-            'format': 'email'
-        },
-        'password': {
-            'type': 'string'
-        },
-        'reset_token': {
-            'type': 'string'
-        }
-    },
-    'required': [
-        'email', 'password', 'reset_token'
-    ]
-}
+from jwt import ExpiredSignatureError
+from src.plugins.authorization import ensure_valid_token_provided, ensure_user_is_permitted
+from src.resources.generic import ensure_token_is_not_revoked
+from src.resources.tokens.tokens import generate_token
+from src.resources.users.users import (
+    update_active_tokens,
+    update_user_with_token,
+    update_user_token_status,
+    update_user_with_refresh_token,
+    pop_revoked_token_from_active_tokens
+)
+from src.utils.errors import ErtisError
+from src.utils.events import Event
+from src.utils.json_helpers import bson_to_json, maybe_object_id
 
 
-def validate_credentials_for_bearer_token(body, opt='CREATE'):
-    if opt == 'CREATE':
-        schema = CREATE_TOKEN_SCHEMA
-    else:
-        schema = REFRESH_TOKEN_SCHEMA
-    try:
-        validate(body, schema)
-    except ValidationError as e:
-        raise BlupointError(
-            err_code="errors.validationError",
-            err_msg=str(e.message),
-            status_code=400,
-            context={
-                'required': e.schema.get('required', []),
-                'properties': e.schema.get('properties', {})
-            }
-        )
-
-
-def _get_exp(token_ttl):
-    exp_range = datetime.timedelta(minutes=token_ttl)
-    return temporal_helpers.to_timestamp(
-        (temporal_helpers.utc_now() + exp_range)
-    )
-
-
-def generate_token(payload, secret, token_ttl, refresh_token_ttl):
-    payload.update({
-        'exp': _get_exp(token_ttl),
-        'jti': str(ObjectId()),
-        'iat': temporal_helpers.to_timestamp(temporal_helpers.utc_now()),
-        'rf': False
-    })
-
-    refresh_token_payload = copy.deepcopy(payload)
-    refresh_token_payload['exp'] = _get_exp(refresh_token_ttl)
-    refresh_token_payload['rf'] = True
-    return {
-        'access_token': jwt.encode(payload=payload, key=secret, algorithm='HS256').decode('utf-8'),
-        'expires_in': token_ttl * 60,
-        'refresh_token': jwt.encode(payload=refresh_token_payload, key=secret, algorithm='HS256').decode('utf-8'),
-        'token_type': 'bearer',
-        'refresh_token_expires_in': refresh_token_ttl * 60
-    }
-
-
-class BlupointBearerTokenService(object):
+class ErtisBearerTokenService(object):
 
     def __init__(self, db):
         self.db = db
+
+    async def generate_token(self, auth_header, settings, membership_id, payload, event_service):
+        skip_auth = False
+
+        if auth_header:
+            token = ensure_valid_token_provided(auth_header)
+            await ensure_token_is_not_revoked(self.db, token)
+            user = await self.validate_token(token, settings['application_secret'], verify=True)
+            if user['membership_id'] != membership_id:
+                raise ErtisError(
+                    err_code="errors.userNotPermitted",
+                    err_msg="User not permitted in this membership",
+                    status_code=401
+                )
+            await ensure_user_is_permitted(self.db, user, 'users.generate_token')
+            skip_auth = True
+
+        payload['username'] = payload['username'].lower()
+        token_generation_parameters = {
+            'body': payload,
+            'application_secret': settings['application_secret'],
+            'token_ttl': settings['token_ttl'],
+            'refresh_token_ttl': settings['refresh_token_ttl'],
+            'membership_id': membership_id,
+            'skip_auth': skip_auth
+        }
+
+        #: await all
+        result = await asyncio.gather(
+            self.craft_token(**token_generation_parameters),
+            self.find_user(payload['username'], membership_id)
+        )
+
+        await asyncio.gather(
+            update_user_with_token(self.db, result[0], result[1]),
+            event_service.on_event((Event(**{
+                'document': result[0],
+                'user': result[1],
+                'type': 'TokenCreatedEvent',
+                'username': result[1]['username'],
+                'membership_id': membership_id,
+                'sys': {
+                    'created_at': datetime.datetime.utcnow()
+                }
+            })))
+        )
+
+        await update_active_tokens(result[1], result[0], self.db)
+        return result
+
+    async def refresh_token(self, do_revoke, refreshable_token, settings, event_service):
+        revoke_flag = True if do_revoke == 'true' else False
+
+        user = await self.load_user(
+            refreshable_token,
+            settings['application_secret'],
+            settings['verify_token']
+        )
+
+        if user['decoded_token']['rf'] is False:
+            raise ErtisError(
+                err_msg="Provided token is not refreshable",
+                err_code="errors.refreshableTokenError",
+                status_code=400
+            )
+
+        await ensure_token_is_not_revoked(self.db, refreshable_token)
+
+        refreshed_token = await self._refresh_token(
+            refreshable_token,
+            user,
+            settings['application_secret'],
+            settings['token_ttl'],
+            settings['refresh_token_ttl']
+        )
+
+        tasks = [update_user_with_refresh_token(self.db, refreshed_token, user),
+                 event_service.on_event((Event(**{
+                     'document': refreshed_token,
+                     'user': user,
+                     'type': 'TokenRefreshedEvent',
+                     'username': user['username'],
+                     'membership_id': user['membership_id'],
+                     'sys': {
+                         'created_at': datetime.datetime.utcnow()
+                     }
+                 })))]
+
+        if revoke_flag:
+            tasks.append(self.db.revoked_tokens.insert_one({
+                'token': refreshable_token,
+                'refreshable': user['decoded_token']['rf'],
+                'revoked_at': datetime.datetime.utcnow(),
+                'token_owner': user
+
+            }))
+        await asyncio.gather(*tasks)
+
+        await pop_revoked_token_from_active_tokens(user, refreshable_token, user['decoded_token']['rf'], self.db)
+
+        await update_active_tokens(user, refreshed_token, self.db)
+
+        return refreshable_token
+
+    async def verify_token(self, token, settings, event_service):
+        await ensure_token_is_not_revoked(self.db, token)
+        user = await self.validate_token(token, settings['application_secret'], verify=True)
+
+        token_response = {
+            'verified': True,
+            'refreshable': user['decoded_token'].get('rf'),
+            'token': token
+        }
+
+        await event_service.on_event(Event(**{
+            'document': token_response,
+            'user': user,
+            'type': 'TokenVerifiedEvent',
+            'username': user['username'],
+            'membership_id': user['membership_id'],
+            'sys': {
+                'created_at': datetime.datetime.utcnow()
+            }
+        }))
+
+        return token_response
+
+    async def revoke_token(self, token, settings, event_service):
+        user = await self.validate_token(token, settings['application_secret'], verify=True)
+
+        await ensure_token_is_not_revoked(self.db, token)
+        await self.db.revoked_tokens.insert_one({
+            'token': token,
+            'refreshable': user['decoded_token']['rf'],
+            'revoked_at': datetime.datetime.utcnow(),
+            'token_owner': user
+        })
+
+        await pop_revoked_token_from_active_tokens(user, token, user['decoded_token']['rf'], self.db)
+
+        await asyncio.gather(
+            update_user_token_status(self.db, user, token, 'revoked'),
+            event_service.on_event(Event(**{
+                'document': {'token': token},
+                'user': user,
+                'type': 'TokenRevokedEvent',
+                'username': user['username'],
+                'membership_id': user['membership_id'],
+                'sys': {
+                    'created_at': datetime.datetime.utcnow()
+                }
+            })))
+
+        return
+
+    async def me(self, user):
+
+        user_role = await self.db.roles.find_one({
+            'slug': user['role'],
+            'membership_id': user['membership_id']
+        })
+
+        user_permissions = user_role.get('permissions', []) if user_role else []
+        user['role_permissions'] = user_permissions
+
+        user.pop('password', None)
+        user.pop('decoded_token', None)
+        return user
 
     async def validate_token(self, token, secret, verify):
         try:
             decoded = jwt.decode(token, key=secret, algorithms='HS256', verify=verify)
 
         except ExpiredSignatureError as e:
-            raise BlupointError(
+            raise ErtisError(
                 status_code=401,
                 err_msg="Provided token has expired",
                 err_code="errors.tokenExpiredError",
@@ -142,7 +208,7 @@ class BlupointBearerTokenService(object):
                 }
             )
         except Exception as e:
-            raise BlupointError(
+            raise ErtisError(
                 status_code=401,
                 err_msg="Provided token is invalid",
                 err_code="errors.tokenIsInvalid",
@@ -157,7 +223,7 @@ class BlupointBearerTokenService(object):
 
         user = await self.db.users.find_one(where)
         if not user:
-            raise BlupointError(
+            raise ErtisError(
                 err_msg="User could not be found with this token",
                 err_code="errors.userNotFound",
                 status_code=404
@@ -173,18 +239,17 @@ class BlupointBearerTokenService(object):
         )
 
         if not user.get('status', None) or user['status'] not in ['active', 'warning']:
-            raise BlupointError(
+            raise ErtisError(
                 err_msg="User status: <{}> is not valid to generate token".format(user.get('status', None)),
                 err_code="errors.userStatusIsNotValid",
                 status_code=401
             )
 
-
         if not kwargs.get('skip_auth', False):
 
             try:
                 if not bcrypt.verify(kwargs.get('body')["password"], user["password"]):
-                    raise BlupointError(
+                    raise ErtisError(
                         status_code=403,
                         err_code="errors.wrongUsernameOrPassword",
                         err_msg="Password mismatch"
@@ -193,12 +258,11 @@ class BlupointBearerTokenService(object):
                 hashed_password = hashlib.md5(('x1Ya1%sZ1l1e' % kwargs.get('body')["password"]).encode()).hexdigest()
 
                 if user['password'] != hashed_password:
-                    raise BlupointError(
+                    raise ErtisError(
                         status_code=403,
                         err_code="errors.wrongUsernameOrPassword",
                         err_msg="Password mismatch"
                     )
-
 
         payload = {
             'prn': str(user['_id']),
@@ -225,7 +289,7 @@ class BlupointBearerTokenService(object):
         })
 
         if not user:
-            raise BlupointError(
+            raise ErtisError(
                 err_code="errors.UserNotFound",
                 err_msg="User not found in db by given username: <{}>".format(username),
                 status_code=401
@@ -233,7 +297,7 @@ class BlupointBearerTokenService(object):
 
         return user
 
-    async def refresh_token(self, token, user, secret, token_ttl, refresh_token_ttl):
+    async def _refresh_token(self, token, user, secret, token_ttl, refresh_token_ttl):
         await self.validate_token(token, secret, verify=True)
         payload = {
             "prn": str(user["_id"])

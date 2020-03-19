@@ -1,7 +1,7 @@
 from functools import wraps
 from jsonschema import ValidationError, validate
 
-from src.utils.errors import BlupointError
+from src.utils.errors import ErtisError
 
 
 def validated(schema):
@@ -12,7 +12,7 @@ def validated(schema):
                 payload = request.json
                 validate(payload, schema)
             except ValidationError as e:
-                raise BlupointError(
+                raise ErtisError(
                     err_code="errors.validationError",
                     err_msg=str(e.message),
                     status_code=400,

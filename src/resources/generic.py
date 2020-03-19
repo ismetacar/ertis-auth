@@ -1,7 +1,16 @@
+import enum
+
 from pymongo.errors import OperationFailure
 
-from src.utils.errors import BlupointError
+from src.utils.errors import ErtisError
 from src.utils.json_helpers import maybe_object_id
+
+
+class OperationTypes(enum.Enum):
+    CREATE = 1
+    UPDATE = 2
+    DELETE = 3
+
 
 QUERY_BODY_SCHEMA = {
     '$schema': 'http://json-schema.org/schema#',
@@ -70,7 +79,7 @@ async def query(db, where=None, select=None, limit=None, sort=None, skip=None, c
 
     except OperationFailure as e:
         if e.code in [2, 4]:
-            raise BlupointError(
+            raise ErtisError(
                 context=e.details,
                 err_msg='Please provide valid query...',
                 err_code='errors.badQuery',
@@ -85,7 +94,7 @@ async def ensure_token_is_not_revoked(db, token):
         'token': token
     })
     if revoked_token:
-        raise BlupointError(
+        raise ErtisError(
             err_code="errors.providedTokenWasRevokedBefore",
             err_msg="Provided token was revoked before",
             status_code=401
@@ -98,14 +107,14 @@ async def ensure_membership_is_exists(db, membership_id, user=None):
     })
 
     if not membership:
-        raise BlupointError(
+        raise ErtisError(
             err_msg="Membership not found in db by given membership_id: <{}>".format(membership_id),
             err_code="errors.MembershipNotFound",
             status_code=404
         )
 
     if user and str(user['membership_id']) != membership_id:
-        raise BlupointError(
+        raise ErtisError(
             err_code="errors.userNotPermittedForMembership",
             err_msg="User is not permitted for membership: <{}>".format(membership_id),
             status_code=401

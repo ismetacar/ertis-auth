@@ -3,44 +3,11 @@ import json
 
 import datetime
 from passlib import hash
-
-from src.resources.applications import generate_random_string
-from src.utils.errors import BlupointError
-from src.utils.json_helpers import maybe_object_id
-
-USER_CREATE_SCHEMA = {
-    '$schema': 'http://json-schema.org/schema#',
-    'type': 'object',
-    'properties': {
-        'username': {
-            'type': 'string'
-        },
-        'password': {
-            'type': 'string'
-        },
-        'email': {
-            'type': 'string',
-            'format': 'email'
-        },
-        'display_name': {
-            'type': 'string'
-        },
-        'firstname': {
-            'type': 'string'
-        },
-        'lastname': {
-            'type': 'string'
-        },
-        'role': {
-            'type': 'string'
-        }
-    },
-    'required': [
-        'username',
-        'password',
-        'email'
-    ]
-}
+from jsonschema import ValidationError, validate
+from src.resources.applications.applications import generate_random_string
+from src.resources.generic import OperationTypes
+from src.utils.errors import ErtisError
+from src.utils.json_helpers import maybe_object_id, bson_to_json
 
 CHANGE_PASSWORD_SCHEMA = {
     '$schema': 'http://json-schema.org/schema#',
@@ -63,27 +30,15 @@ CHANGE_PASSWORD_SCHEMA = {
     ]
 }
 
-USER_STR_FIELDS = [
-    'display_name', 'firstname', 'lastname', 'photo_url', 'link', 'email_verified', 'role'
-]
-
-USER_ARR_FIELDS = [
-    'providers'
-]
-
-USER_DICT_FIELDS = [
-    'token'
-]
-
 NON_UPDATABLE_FIELDS = [
-    '_id', 'token', 'membership_id'
+    '_id', 'token', 'membership_id', 'providers'
 ]
 
 
 async def find_user_by_query(db, where):
     users = await db.users.find(where).to_list(length=None)
     if not users:
-        raise BlupointError(
+        raise ErtisError(
             err_msg="User not found by given query <{}>".format(json.dumps(where)),
             err_code="errors.userNotFound",
             status_code=404
@@ -99,30 +54,11 @@ async def find_user(db, user_id, membership_id):
     })
 
     if not user:
-        raise BlupointError(
+        raise ErtisError(
             err_msg="User not found in db by given _id: <{}>".format(user_id),
             err_code="errors.userNotFound",
             status_code=404
         )
-
-    return user
-
-
-def set_nullable_fields(user):
-    for field in USER_STR_FIELDS:
-        if user.get(field, None):
-            continue
-        user[field] = ''
-
-    for field in USER_ARR_FIELDS:
-        if user.get(field, None):
-            continue
-        user[field] = []
-
-    for field in USER_DICT_FIELDS:
-        if user.get(field, None):
-            continue
-        user[field] = {}
 
     return user
 
@@ -150,7 +86,7 @@ async def ensure_email_and_username_available(db, body):
     })
 
     if exists_document:
-        raise BlupointError(
+        raise ErtisError(
             err_msg="Email already exists",
             err_code="errors.emailAlreadyExists",
             status_code=400
@@ -162,7 +98,7 @@ async def ensure_email_and_username_available(db, body):
     })
 
     if exists_document:
-        raise BlupointError(
+        raise ErtisError(
             err_code="errors.usernameAlreadyExistsInMembership",
             err_msg="Username: <{}> already exists in membership: <{}>".format(body['username'], body['membership_id']),
             status_code=400
@@ -253,7 +189,7 @@ async def update_user_with_body(db, user_id, membership_id, body):
             }
         )
     except Exception as e:
-        raise BlupointError(
+        raise ErtisError(
             err_code="errors.errorOccurredWhileUpdatingUser",
             err_msg="An error occurred while updating user with provided body",
             status_code=500,
@@ -274,7 +210,7 @@ async def remove_user(db, user_id, membership_id):
             'membership_id': membership_id
         })
     except Exception as e:
-        raise BlupointError(
+        raise ErtisError(
             err_msg="An error occurred while deleting user",
             err_code="errors.errorOccurdedWhileDeletingUser",
             status_code=500,
@@ -295,7 +231,7 @@ async def ensure_provided_role_is_exists(db, user, membership_id):
     })
 
     if not role:
-        raise BlupointError(
+        raise ErtisError(
             err_msg="Provided role: <{}> was not found in membership".format(user['role']),
             err_code="errors.providedRoleWasNotFound",
             status_code=400
@@ -331,7 +267,7 @@ async def reset_user_password(db, user, password):
     is_expired = check_expire_date_for_reset_token(user['reset_password']['expire_date'])
 
     if is_expired:
-        raise BlupointError(
+        raise ErtisError(
             err_msg="Provided password reset token has expired",
             err_code="errors.passwordResetTokenHasExpired",
             status_code=400
@@ -462,3 +398,89 @@ async def pop_revoked_token_from_active_tokens(user, token, rf, db):
             'active_tokens': new_active_tokens
         }
     }, upsert=True)
+
+
+async def generate_user_create_schema(membership_id, user_type_service, operation=OperationTypes.CREATE):
+    user_create_schema = {
+        '$schema': 'http://json-schema.org/schema#',
+        'type': 'object',
+        'additionalProperties': False,
+        'properties': {
+            'username': {
+                'type': 'string'
+            },
+            'password': {
+                'type': 'string'
+            },
+            'email': {
+                'type': 'string',
+                'format': 'email'
+            },
+            'firstname': {
+                'type': 'string'
+            },
+            'lastname': {
+                'type': 'string'
+            },
+            'role': {
+                'type': 'string'
+            },
+            'status': {
+                'type': 'string',
+                'enum': ['active', 'passive', 'blocked', 'warning']
+            }
+        },
+        'required': [
+            'username',
+            'password',
+            'email',
+            'firstname',
+            'lastname',
+            'role'
+        ]
+    }
+
+    if operation == OperationTypes.UPDATE:
+        user_create_schema['properties'].update({
+            'ip_info': {
+                'type': 'object'
+            },
+            'sys': {
+                'type': 'object'
+            },
+            '_id': {
+                'type': 'string'
+            },
+            'token': {
+                'type': 'object'
+            },
+            'membership_id': {
+                'type': 'string'
+            }
+        })
+
+    user_type = await user_type_service.get_user_type(membership_id)
+    if not user_type:
+        return user_create_schema
+
+    user_create_schema['properties'].update(user_type['schema']['properties'])
+    user_create_schema['required'] += user_type['schema']['required'] if operation == OperationTypes.CREATE else []
+    user_create_schema['additionalProperties'] = user_type['schema'].get('additionalProperties', False)
+    return user_create_schema
+
+
+async def validate_user_model_by_user_type(membership_id, payload, user_type_service, operation=OperationTypes.CREATE):
+    _payload = json.loads(json.dumps(payload, default=bson_to_json))
+    schema = await generate_user_create_schema(membership_id, user_type_service, operation=operation)
+    try:
+        validate(_payload, schema)
+    except ValidationError as e:
+        raise ErtisError(
+            err_code="errors.validationError",
+            err_msg=str(e.message),
+            status_code=400,
+            context={
+                'required': e.schema.get('required', []),
+                'properties': e.schema.get('properties', {})
+            }
+        )

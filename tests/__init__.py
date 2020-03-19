@@ -4,7 +4,7 @@ from pymongo import MongoClient
 
 from src.utils.json_helpers import maybe_object_id
 
-db = MongoClient(host='mongodb://localhost:27017/blupoint_auth_test').get_default_database()
+db = MongoClient(host='mongodb://localhost:27017/ertis_auth_test').get_default_database()
 
 
 def insert_mock_data():
@@ -20,13 +20,14 @@ def insert_mock_data():
         "permissions": [
             "users.*",
             "applications.*",
-            "roles.*"
+            "roles.*",
+            "user_types.*"
         ],
         "slug": "admin-1",
         "membership_id": str(membership_doc['_id']),
         "sys": {
             "created_at": datetime.datetime.utcnow(),
-            "created_by": "ismetacar"
+            "created_by": "system"
         }
     }
     inserted_doc = db.roles.insert_one(role_doc)
@@ -34,17 +35,17 @@ def insert_mock_data():
 
     user_doc = {
         "status": "active",
-        "username": "gunererd",
+        "username": "john",
         "password": "$2b$12$6ANncHsqxmKkSC8ZulIaL.SjAG7qTqEzkpqzYaEEC4naq5KVPObFm",
-        "email": "eguner@blutv.com",
+        "email": "doe@domain.com",
         "membership_id": str(membership_doc['_id']),
         "sys": {
             "created_at": datetime.datetime.utcnow(),
-            "created_by": "ismetacar"
+            "created_by": "system"
         },
-        "display_name": "Erdem Güner",
-        "firstname": "erdem",
-        "lastname": "guner",
+        "display_name": "John Doe",
+        "firstname": "john",
+        "lastname": "doe",
         "photo_url": "",
         "link": "",
         "email_verified": "",
@@ -70,4 +71,10 @@ def remove_mock_data(membership, user, role):
 
     db.roles.remove({
         '_id': maybe_object_id(role['_id'])
+    })
+
+
+def remove_user_type(user_type_id):
+    db.user_types.remove({
+        '_id': maybe_object_id(user_type_id)
     })

@@ -1,6 +1,6 @@
 from slugify import slugify
 
-from src.utils.errors import BlupointError
+from src.utils.errors import ErtisError
 from src.utils.json_helpers import maybe_object_id
 
 NON_UPDATABLE_FIELDS = [
@@ -14,6 +14,7 @@ PERMISSION_SCHEMA = {
         '*',
         'users.*',
         'roles.*',
+        'user_types.*',
         'applications.*',
         'users.read',
         'users.create',
@@ -26,7 +27,12 @@ PERMISSION_SCHEMA = {
         'applications.read',
         'applications.create',
         'applications.update',
-        'applications.delete'
+        'applications.delete',
+        'user_types.read',
+        'user_types.create',
+        'user_types.update',
+        'user_types.delete',
+
     ]
 }
 
@@ -58,7 +64,7 @@ async def check_slug_conflict(db, role):
     })
 
     if existing_role:
-        raise BlupointError(
+        raise ErtisError(
             err_code="errors.roleSlugAlreadyUsing",
             err_msg="Role slug already using",
             status_code=409
@@ -74,7 +80,7 @@ async def find_role(db, role_id, membership_id):
     })
 
     if not role:
-        raise BlupointError(
+        raise ErtisError(
             err_msg="Role not found by given _id: <{}> in membership".format(role_id),
             err_code="errors.roleNotFoundError",
             status_code=404
@@ -102,7 +108,7 @@ async def update_role_with_body(db, role_id, membership_id, body):
             }
         )
     except Exception as e:
-        raise BlupointError(
+        raise ErtisError(
             err_code="errors.errorOccurredWhileUpdatingRole",
             err_msg="An error occurred while updating role with provided body",
             status_code=500,
@@ -123,7 +129,7 @@ async def remove_role(db, role_id, membership_id):
             'membership_id': membership_id
         })
     except Exception as e:
-        raise BlupointError(
+        raise ErtisError(
             err_msg="An error occurred while deleting role",
             err_code="errors.errorOccurdedWhileDeletingRole",
             status_code=500,

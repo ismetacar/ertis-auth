@@ -5,7 +5,7 @@ import logging
 
 from bson import ObjectId
 
-from src.utils.errors import BlupointError
+from src.utils.errors import ErtisError
 from src.utils.json_helpers import bson_to_json, object_hook, maybe_object_id
 
 logger = logging.getLogger("events")
@@ -54,7 +54,7 @@ def subscribe(handler):
             __HANDLERS[event_name] = []
 
         if not hasattr(handler, 'handle'):
-            raise BlupointError(
+            raise ErtisError(
                 err_msg="Handler objects must implement handle method",
                 err_code="errors.internalError"
             )

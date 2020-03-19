@@ -1,6 +1,11 @@
 import motor.motor_asyncio as async_motor
 
-from src.services.bearer_token_service import BlupointBearerTokenService
+from src.services.application import ApplicationService
+from src.services.bearer_token_service import ErtisBearerTokenService
+from src.services.password_service import PasswordService
+from src.services.role import RoleService
+from src.services.user import UserService
+from src.services.user_type import UserTypeService
 from src.utils.events import EventPersister
 
 
@@ -21,5 +26,11 @@ def init_startup_methods(app, settings):
             serverSelectionTimeoutMS=10000
         )[database_name]
 
-        app.bearer_token_service = BlupointBearerTokenService(app.db)
+        app.application_service = ApplicationService(app.db)
+        app.bearer_token_service = ErtisBearerTokenService(app.db)
+        app.password_service = PasswordService(app.db)
+        app.role_service = RoleService(app.db)
+        app.user_service = UserService(app.db)
+        app.user_type_service = UserTypeService(app.db)
+
         app.persist_event = EventPersister(app.db)

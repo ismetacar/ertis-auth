@@ -2,6 +2,7 @@ from sanic.response import json
 
 
 def init_routes_api(app, settings):
+    # region Get All Routes
     @app.route('/api/v1/api-map')
     async def all_routes(request):
         links = []
@@ -16,3 +17,4 @@ def init_routes_api(app, settings):
             links.append(line)
 
         return json(links)
+    # endregion

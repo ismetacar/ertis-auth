@@ -3,7 +3,7 @@ import string
 
 from slugify import slugify
 
-from src.utils.errors import BlupointError
+from src.utils.errors import ErtisError
 from src.utils.json_helpers import maybe_object_id
 
 APPLICATION_CREATE_SCHEMA = {
@@ -36,7 +36,7 @@ async def ensure_name_is_unique_in_membership(db, application):
     })
 
     if exists_application:
-        raise BlupointError(
+        raise ErtisError(
             err_msg="Application already exists in db with given name: <{}>".format(application['name']),
             err_code="errors.applicationNameAlreadyExists",
             status_code=400
@@ -58,7 +58,7 @@ async def find_application(db, membership_id, application_id):
     })
 
     if not application:
-        raise BlupointError(
+        raise ErtisError(
             err_code="errors.applicationNotFound",
             err_msg="Application was not found by given id: <{}>".format(application_id),
             status_code=404
@@ -86,7 +86,7 @@ async def update_application_with_body(db, application_id, membership_id, body):
             }
         )
     except Exception as e:
-        raise BlupointError(
+        raise ErtisError(
             err_code="errors.errorOccurredWhileUpdatingUser",
             err_msg="An error occurred while updating user with provided body",
             status_code=500,
@@ -107,7 +107,7 @@ async def remove_application(db, membership_id, application_id):
             'membership_id': membership_id
         })
     except Exception as e:
-        raise BlupointError(
+        raise ErtisError(
             err_msg="An error occurred while deleting user",
             err_code="errors.errorOccurredWhileDeletingUser",
             status_code=500,

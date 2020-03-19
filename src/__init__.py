@@ -4,7 +4,7 @@ from sanic import Sanic
 
 
 def create_sanic_app(settings):
-    app = Sanic(load_env='AUTH_')
+    app = Sanic(name='AUTH_')
     app.logger = logging.getLogger('create_app')
 
     for key in settings.keys():
@@ -24,6 +24,9 @@ def create_sanic_app(settings):
 
     from src.api.me import init_me_api
     init_me_api(app, settings)
+
+    from src.api.user_types import init_user_types_api
+    init_user_types_api(app, settings)
 
     from src.api.users import init_users_api
     init_users_api(app, settings)

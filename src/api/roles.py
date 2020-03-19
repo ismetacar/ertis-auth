@@ -1,22 +1,11 @@
-import copy
-import datetime
 import json
 from sanic import response
-from src.plugins.authorization import authorized
-from src.plugins.validator import validated
-from src.resources.generic import query, QUERY_BODY_SCHEMA, ensure_membership_is_exists
-from src.resources.roles import (
-    generate_slug,
-    check_slug_conflict,
-    find_role,
-    update_role_with_body,
-    pop_non_updatable_fields,
-    remove_role,
-    ROLE_CRETE_SCHEMA
-)
 from src.utils import query_helpers
-from src.utils.errors import BlupointError
+from src.plugins.validator import validated
 from src.utils.json_helpers import bson_to_json
+from src.plugins.authorization import authorized
+from src.resources.generic import QUERY_BODY_SCHEMA, ensure_membership_is_exists
+from src.resources.roles.roles import ROLE_CRETE_SCHEMA
 
 
 def init_roles_api(app, settings):
@@ -25,75 +14,43 @@ def init_roles_api(app, settings):
     @authorized(app, settings, methods=['POST'], required_permission='roles.create')
     @validated(ROLE_CRETE_SCHEMA)
     async def create_role(request, membership_id, **kwargs):
-        await ensure_membership_is_exists(app.db, membership_id, kwargs.get('user'))
+        await ensure_membership_is_exists(app.db, membership_id, request.ctx.user)
 
         body = request.json
-        role = generate_slug(body)
-        role['membership_id'] = membership_id
+        resource = await app.role_service.create_role(body, request.ctx.user)
 
-        role = await check_slug_conflict(app.db, role)
-        role['sys'] = {
-            'created_at': datetime.datetime.utcnow(),
-            'created_by': kwargs.get('user')['username']
-        }
-        saved_role = await app.db.roles.insert_one(role)
+        return response.json(json.loads(json.dumps(resource, default=bson_to_json)), 201)
 
-        role['_id'] = str(saved_role.inserted_id)
-        role = json.loads(json.dumps(role, default=bson_to_json))
-
-        return response.json(role, 201)
     # endregion
 
     # region Get Role
     @app.route('/api/v1/memberships/<membership_id>/roles/<role_id>', methods=['GET'])
     @authorized(app, settings, methods=['GET'], required_permission='roles.read')
     async def get_role(request, membership_id, role_id, **kwargs):
-        await ensure_membership_is_exists(app.db, membership_id, kwargs.get('user'))
+        await ensure_membership_is_exists(app.db, membership_id, request.ctx.user)
+        resource = await app.role_service.get_role(role_id, request.ctx.user)
 
-        role = await find_role(app.db, role_id, membership_id)
-        role = json.loads(json.dumps(role, default=bson_to_json))
+        return response.json(json.loads(json.dumps(resource, default=bson_to_json)), 200)
 
-        return response.json(role)
     # endregion
 
     # region Update Role
     @app.route('/api/v1/memberships/<membership_id>/roles/<role_id>', methods=['PUT'])
     @authorized(app, settings, methods=['PUT'], required_permission='roles.update')
     async def update_role(request, membership_id, role_id, **kwargs):
-        await ensure_membership_is_exists(app.db, membership_id, kwargs.get('user'))
+        await ensure_membership_is_exists(app.db, membership_id, request.ctx.user)
         body = request.json
-        provided_body = pop_non_updatable_fields(body)
+        resource = await app.role_service.update_role(role_id, body, request.ctx.user)
+        return response.json(json.loads(json.dumps(resource, default=bson_to_json)))
 
-        role = await find_role(app.db, role_id, membership_id)
-        _role = copy.deepcopy(role)
-        _role.update(provided_body)
-        if _role == role:
-            raise BlupointError(
-                err_code="errors.identicalDocument",
-                err_msg="Identical document error",
-                status_code=409
-            )
-
-        role['sys'].update({
-            'modified_at': datetime.datetime.utcnow(),
-            'modified_by': kwargs.get('user')['username']
-        })
-
-        provided_body['sys'] = role['sys']
-
-        role = await update_role_with_body(app.db, role_id, membership_id, provided_body)
-        role = json.loads(json.dumps(role, default=bson_to_json))
-
-        return response.json(role)
     # endregion
 
     # region Delete Role
     @app.route('/api/v1/memberships/<membership_id>/roles/<role_id>', methods=['DELETE'])
     @authorized(app, settings, methods=['DELETE'], required_permission='roles.delete')
     async def delete_role(request, membership_id, role_id, **kwargs):
-        await ensure_membership_is_exists(app.db, membership_id, kwargs.get('user'))
-        await remove_role(app.db, role_id, membership_id)
-
+        await ensure_membership_is_exists(app.db, membership_id, request.ctx.user)
+        await app.role_service.delete_role(role_id, request.ctx.user)
         return response.json({}, 204)
 
     # endregion
@@ -103,13 +60,13 @@ def init_roles_api(app, settings):
     @authorized(app, settings, methods=['POST'], required_permission='roles.read')
     @validated(QUERY_BODY_SCHEMA)
     async def query_roles(request, membership_id, **kwargs):
-        await ensure_membership_is_exists(app.db, membership_id, kwargs.get('user'))
+        await ensure_membership_is_exists(app.db, membership_id, request.ctx.user)
 
         where, select, limit, sort, skip = query_helpers.parse(request)
-        users, count = await query(app.db, where, select, limit, skip, sort, 'roles')
+        roles, count = await app.role_service.query_roles(where, select, limit, skip, sort)
         response_json = json.loads(json.dumps({
             'data': {
-                'items': users,
+                'items': roles,
                 'count': count
             }
         }, default=bson_to_json))
