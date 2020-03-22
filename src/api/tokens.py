@@ -1,5 +1,5 @@
 import json
-from sanic.response import json
+from sanic import response
 from src.plugins.validator import validated
 from src.plugins.authorization import authorized
 from src.resources.generic import ensure_membership_is_exists
@@ -10,6 +10,7 @@ from src.resources.tokens.tokens import (
     RESET_PASSWORD_SCHEMA
 )
 from src.resources.users.users import CHANGE_PASSWORD_SCHEMA
+from src.utils.json_helpers import bson_to_json
 
 
 def init_token_api(app, settings):
@@ -31,7 +32,7 @@ def init_token_api(app, settings):
             app.persist_event
         )
 
-        return json(result[0], 201)
+        return response.json(json.loads(json.dumps(result[0], default=bson_to_json)), 201)
 
     # endregion
 
@@ -50,7 +51,7 @@ def init_token_api(app, settings):
             app.persist_event
         )
 
-        return json(refreshed_token, 200)
+        return response.json(json.loads(json.dumps(refreshed_token, default=bson_to_json)), 200)
 
     # endregion
 
@@ -63,7 +64,7 @@ def init_token_api(app, settings):
 
         token_response = await app.bearer_token_service.verify_token(token, settings, app.persist_event)
 
-        return json(token_response, 200)
+        return response.json(json.loads(json.dumps(token_response, default=bson_to_json)), 200)
 
     # endregion
 
@@ -75,7 +76,7 @@ def init_token_api(app, settings):
         token = body['token']
         await app.bearer_token_service.revoke_token(token, settings, app.persist_event)
 
-        return json({}, 204)
+        return response.json({}, 204)
 
     # endregion
 
@@ -88,7 +89,7 @@ def init_token_api(app, settings):
         await ensure_membership_is_exists(app.db, membership_id, user=None)
 
         user = await app.password_service.reset_password(body, membership_id, app.persist_event)
-        return json(user['reset_password'], 200)
+        return response.json(user['reset_password'], 200)
 
     # endregion
 
@@ -101,7 +102,7 @@ def init_token_api(app, settings):
         await ensure_membership_is_exists(app.db, membership_id, user=None)
 
         await app.password_service.set_password(body, membership_id, app.persist_event)
-        return json({}, 204)
+        return response.json({}, 204)
 
     # endregion
 
@@ -114,6 +115,6 @@ def init_token_api(app, settings):
         body = request.json
         await app.password_service.change_password(body, user, app.persist_event)
 
-        return json({}, 200)
+        return response.json({}, 200)
 
     # endregion
