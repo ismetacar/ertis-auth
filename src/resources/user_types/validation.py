@@ -107,7 +107,8 @@ BASIC_TYPES = [
     "number",
     "integer",
     "boolean",
-    "null"
+    "null",
+    "object"
 ]
 
 KEYWORDS_BASED_ON_TYPES = {
@@ -141,6 +142,10 @@ KEYWORDS_BASED_ON_TYPES = {
     ],
     "null": [
         "description"
+    ],
+    "object": [
+        "properties",
+        "required"
     ]
 }
 

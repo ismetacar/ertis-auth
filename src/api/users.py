@@ -27,7 +27,7 @@ def init_users_api(app, settings):
         await ensure_membership_is_exists(app.db, membership_id, request.ctx.user)
 
         resource = await app.user_service.get_user(user_id, request.ctx.user)
-        return response.json(json.loads(json.dumps(resource, default=bson_to_json)), 201)
+        return response.json(json.loads(json.dumps(resource, default=bson_to_json)), 200)
 
     # endregion
 
