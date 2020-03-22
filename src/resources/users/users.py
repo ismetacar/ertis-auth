@@ -72,6 +72,8 @@ def prepare_user_fields(user, membership_id, password, opt='create'):
     if opt != 'create':
         return user
 
+    user['providers'] = []
+    user['email_verified'] = False
     user['membership_id'] = membership_id
     if password:
         user['password'] = hash_user_password(password)
