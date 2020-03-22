@@ -115,5 +115,6 @@ def generate_token(payload, secret, token_ttl, refresh_token_ttl):
         'expires_in': token_ttl * 60,
         'refresh_token': jwt.encode(payload=refresh_token_payload, key=secret, algorithm='HS256').decode('utf-8'),
         'token_type': 'bearer',
-        'refresh_token_expires_in': refresh_token_ttl * 60
+        'refresh_token_expires_in': refresh_token_ttl * 60,
+        'created_at': datetime.datetime.utcnow()
     }

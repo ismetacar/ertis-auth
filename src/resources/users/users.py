@@ -456,6 +456,9 @@ async def generate_user_create_schema(membership_id, user_type_service, operatio
             },
             'membership_id': {
                 'type': 'string'
+            },
+            'providers': {
+                'type': 'string'
             }
         })
 
