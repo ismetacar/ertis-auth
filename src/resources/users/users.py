@@ -458,7 +458,10 @@ async def generate_user_create_schema(membership_id, user_type_service, operatio
                 'type': 'string'
             },
             'providers': {
-                'type': 'string'
+                'type': 'array'
+            },
+            'email_verified': {
+                'type': 'boolean'
             }
         })
 
