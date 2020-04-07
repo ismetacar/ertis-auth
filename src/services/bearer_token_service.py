@@ -127,7 +127,15 @@ class ErtisBearerTokenService(object):
 
         await update_active_tokens(user, refreshed_token, self.db)
 
-        return refreshable_token
+        payload = {
+            "prn": str(user["_id"])
+        }
+        return generate_token(
+            payload,
+            settings['application_secret'],
+            settings['token_ttl'],
+            settings['refresh_token_ttl']
+        )
 
     async def verify_token(self, token, settings, event_service):
         await ensure_token_is_not_revoked(self.db, token)
