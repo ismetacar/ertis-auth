@@ -80,12 +80,13 @@ class EventPersister(object):
             "_id": getattr(event, '_id', ObjectId()),
             "type": event.type,
             "document": getattr(event, 'document'),
-            "user": getattr(event, 'user'),
+            "prior": getattr(event, 'prior'),
+            "utilizer": getattr(event, 'utilizer'),
             "membership_id": getattr(event, 'membership_id', None),
             "custom": getattr(event, 'custom', None),
             "sys": {
                 "created_at": datetime.datetime.utcnow(),
-                "created_by": getattr(event, 'username')
+                "created_by": getattr(event, 'utilizer').get('username', getattr(event, 'utilizer').get('name'))
             }
         }
 

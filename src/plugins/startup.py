@@ -1,6 +1,7 @@
 import motor.motor_asyncio as async_motor
 
 from src.services.application import ApplicationService
+from src.services.basic_token_service import ErtisBasicTokenService
 from src.services.bearer_token_service import ErtisBearerTokenService
 from src.services.events import EventService
 from src.services.password_service import PasswordService
@@ -29,6 +30,7 @@ def init_startup_methods(app, settings):
 
         app.application_service = ApplicationService(app.db)
         app.bearer_token_service = ErtisBearerTokenService(app.db)
+        app.basic_token_service = ErtisBasicTokenService(app.db)
         app.password_service = PasswordService(app.db)
         app.role_service = RoleService(app.db)
         app.user_service = UserService(app.db)

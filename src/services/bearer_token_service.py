@@ -3,18 +3,16 @@ import datetime
 import jwt
 import json
 import asyncio
-import hashlib
 from passlib.hash import bcrypt
 from jwt import ExpiredSignatureError
-from src.plugins.authorization import ensure_valid_token_provided, ensure_user_is_permitted
 from src.resources.generic import ensure_token_is_not_revoked
 from src.resources.tokens.tokens import generate_token
 from src.resources.users.users import (
-    update_active_tokens,
+    insert_active_tokens,
     update_user_with_token,
     update_user_token_status,
-    update_user_with_refresh_token,
-    pop_revoked_token_from_active_tokens
+    remove_from_active_tokens,
+    update_user_with_refresh_token
 )
 from src.utils.errors import ErtisError
 from src.utils.events import Event
@@ -26,28 +24,16 @@ class ErtisBearerTokenService(object):
     def __init__(self, db):
         self.db = db
 
-    async def generate_token(self, auth_header, settings, membership_id, payload, event_service):
+    async def generate_token(self, settings, membership, payload, event_service):
+        membership_id = str(membership['_id'])
         skip_auth = False
-
-        if auth_header:
-            token = ensure_valid_token_provided(auth_header)
-            await ensure_token_is_not_revoked(self.db, token)
-            user = await self.validate_token(token, settings['application_secret'], verify=True)
-            if user['membership_id'] != membership_id:
-                raise ErtisError(
-                    err_code="errors.userNotPermitted",
-                    err_msg="User not permitted in this membership",
-                    status_code=401
-                )
-            await ensure_user_is_permitted(self.db, user, 'users.generate_token')
-            skip_auth = True
 
         payload['username'] = payload['username'].lower()
         token_generation_parameters = {
             'body': payload,
             'application_secret': settings['application_secret'],
-            'token_ttl': settings['token_ttl'],
-            'refresh_token_ttl': settings['refresh_token_ttl'],
+            'token_ttl': membership['token_ttl'],
+            'refresh_token_ttl': membership['refresh_token_ttl'],
             'membership_id': membership_id,
             'skip_auth': skip_auth
         }
@@ -62,9 +48,9 @@ class ErtisBearerTokenService(object):
             update_user_with_token(self.db, result[0], result[1]),
             event_service.on_event((Event(**{
                 'document': result[0],
-                'user': result[1],
+                'prior': {},
+                'utilizer': result[1],
                 'type': 'TokenCreatedEvent',
-                'username': result[1]['username'],
                 'membership_id': membership_id,
                 'sys': {
                     'created_at': datetime.datetime.utcnow()
@@ -72,7 +58,7 @@ class ErtisBearerTokenService(object):
             })))
         )
 
-        await update_active_tokens(result[1], result[0], self.db)
+        await insert_active_tokens(result[1], result[0], self.db)
         return result
 
     async def refresh_token(self, do_revoke, refreshable_token, settings, event_service):
@@ -91,22 +77,26 @@ class ErtisBearerTokenService(object):
                 status_code=400
             )
 
+        membership = await self.db.memberships.find_one({
+            '_id': maybe_object_id(user['membership_id'])
+        })
+
         await ensure_token_is_not_revoked(self.db, refreshable_token)
 
         refreshed_token = await self._refresh_token(
             refreshable_token,
             user,
             settings['application_secret'],
-            settings['token_ttl'],
-            settings['refresh_token_ttl']
+            membership['token_ttl'],
+            membership['refresh_token_ttl']
         )
 
         tasks = [update_user_with_refresh_token(self.db, refreshed_token, user),
                  event_service.on_event((Event(**{
                      'document': refreshed_token,
-                     'user': user,
+                     'prior': {},
+                     'utilizer': user,
                      'type': 'TokenRefreshedEvent',
-                     'username': user['username'],
                      'membership_id': user['membership_id'],
                      'sys': {
                          'created_at': datetime.datetime.utcnow()
@@ -123,19 +113,10 @@ class ErtisBearerTokenService(object):
             }))
         await asyncio.gather(*tasks)
 
-        await pop_revoked_token_from_active_tokens(user, refreshable_token, user['decoded_token']['rf'], self.db)
+        await remove_from_active_tokens(user, refreshable_token, user['decoded_token']['rf'], self.db)
+        await insert_active_tokens(user, refreshed_token, self.db)
 
-        await update_active_tokens(user, refreshed_token, self.db)
-
-        payload = {
-            "prn": str(user["_id"])
-        }
-        return generate_token(
-            payload,
-            settings['application_secret'],
-            settings['token_ttl'],
-            settings['refresh_token_ttl']
-        )
+        return refreshed_token
 
     async def verify_token(self, token, settings, event_service):
         await ensure_token_is_not_revoked(self.db, token)
@@ -149,9 +130,9 @@ class ErtisBearerTokenService(object):
 
         await event_service.on_event(Event(**{
             'document': token_response,
-            'user': user,
+            'prior': {},
+            'utilizer': user,
             'type': 'TokenVerifiedEvent',
-            'username': user['username'],
             'membership_id': user['membership_id'],
             'sys': {
                 'created_at': datetime.datetime.utcnow()
@@ -171,15 +152,15 @@ class ErtisBearerTokenService(object):
             'token_owner': user
         })
 
-        await pop_revoked_token_from_active_tokens(user, token, user['decoded_token']['rf'], self.db)
+        await remove_from_active_tokens(user, token, user['decoded_token']['rf'], self.db)
 
         await asyncio.gather(
             update_user_token_status(self.db, user, token, 'revoked'),
             event_service.on_event(Event(**{
                 'document': {'token': token},
-                'user': user,
+                'prior': {},
+                'utilizer': user,
                 'type': 'TokenRevokedEvent',
-                'username': user['username'],
                 'membership_id': user['membership_id'],
                 'sys': {
                     'created_at': datetime.datetime.utcnow()
@@ -260,23 +241,12 @@ class ErtisBearerTokenService(object):
             )
 
         if not kwargs.get('skip_auth', False):
-
-            try:
-                if not bcrypt.verify(kwargs.get('body')["password"], user["password"]):
-                    raise ErtisError(
-                        status_code=403,
-                        err_code="errors.wrongUsernameOrPassword",
-                        err_msg="Password mismatch"
-                    )
-            except Exception as ex:
-                hashed_password = hashlib.md5(('x1Ya1%sZ1l1e' % kwargs.get('body')["password"]).encode()).hexdigest()
-
-                if user['password'] != hashed_password:
-                    raise ErtisError(
-                        status_code=403,
-                        err_code="errors.wrongUsernameOrPassword",
-                        err_msg="Password mismatch"
-                    )
+            if not bcrypt.verify(kwargs.get('body')["password"], user["password"]):
+                raise ErtisError(
+                    status_code=403,
+                    err_code="errors.wrongUsernameOrPassword",
+                    err_msg="Password mismatch"
+                )
 
         payload = {
             'prn': str(user['_id']),

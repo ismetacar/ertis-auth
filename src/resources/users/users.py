@@ -2,6 +2,8 @@ import copy
 import json
 
 import datetime
+
+from bson import ObjectId
 from passlib import hash
 from jsonschema import ValidationError, validate
 from src.resources.applications.applications import generate_random_string
@@ -292,114 +294,66 @@ async def reset_user_password(db, user, password):
     )
 
 
-async def update_active_tokens(user, token_model, db):
-    tokens_document = await db.active_tokens.find_one({
-        'membership_id': user['membership_id'],
-        'user_id': str(user['_id'])
-    })
+async def insert_active_tokens(user, token_model, db):
+    access_token = token_model['access_token']
+    refresh_token = token_model['refresh_token']
+    user_id = str(user['_id'])
+    membership_id = str(user['membership_id'])
 
-    active_tokens = {}
-    if tokens_document:
-        active_tokens = tokens_document.get('active_tokens', {})
-
-    access_tokens = active_tokens.get('access_tokens', [])
-    refresh_tokens = active_tokens.get('refresh_tokens', [])
-
-    access_tokens.append({
-        'token': token_model['access_token'],
-        'generated_at': datetime.datetime.utcnow()
-    })
-
-    refresh_tokens.append({
-        'token': token_model['refresh_token'],
-        'generated_at': datetime.datetime.utcnow()
-    })
-
-    active_tokens = {
-        'access_tokens': access_tokens,
-        'refresh_tokens': refresh_tokens
+    active_access_token_document = {
+        '_id': ObjectId(),
+        'user_id': user_id,
+        'type': 'access',
+        'membership_id': membership_id,
+        'token': access_token,
+        'access_created_at': datetime.datetime.utcnow()
     }
 
-    await db.active_tokens.update_one({
-        'membership_id': user['membership_id'],
-        'user_id': str(user['_id'])
-    }, {
-        '$set': {
-            'active_tokens': active_tokens
-        }
-    }, upsert=True)
+    active_refresh_token_document = {
+        '_id': ObjectId(),
+        'user_id': user_id,
+        'type': 'refresh',
+        'membership_id': membership_id,
+        'token': refresh_token,
+        'refresh_created_at': datetime.datetime.utcnow()
+    }
+
+    await db.active_tokens.insert_one(active_access_token_document)
+    await db.active_tokens.insert_one(active_refresh_token_document)
 
 
 async def revoke_and_delete_old_active_tokens(user, db):
-    tokens_document = await db.active_tokens.find_one({
+    where = {
         'membership_id': user['membership_id'],
         'user_id': str(user['_id'])
-    })
+    }
 
-    tokens_document_model = {}
-    if tokens_document:
-        tokens_document_model = tokens_document
+    active_tokens_document = db.active_tokens.find(where)
+    active_tokens_document = await active_tokens_document.to_list(length=None)
 
-    active_tokens = tokens_document_model.get('active_tokens', {})
-    access_tokens = active_tokens.get('access_tokens', [])
-    refresh_tokens = active_tokens.get('refresh_tokens', [])
-
-    tokens = access_tokens + refresh_tokens
-    for active_token_model in tokens:
+    for active_token in active_tokens_document:
         await db.revoked_tokens.insert_one({
-            'token': active_token_model['token'],
-            'refreshable': user.get('decoded_token', {}).get('rf', False),
+            'token': active_token['token'],
+            'refreshable': True if active_token['type'] == 'refresh' else False,
             'revoked_at': datetime.datetime.utcnow(),
             'token_owner': user
         })
 
-    await db.active_tokens.update_one({
+    await db.active_tokens.delete_many(where)
+
+
+async def remove_from_active_tokens(user, token, rf, db):
+    where = {
         'membership_id': user['membership_id'],
-        'user_id': str(user['_id'])
-    }, {
-        '$set': {
-            'active_tokens': {}
-        }
-    }, upsert=True)
-
-
-async def pop_revoked_token_from_active_tokens(user, token, rf, db):
-    tokens_document = await db.active_tokens.find_one({
-        'membership_id': user['membership_id'],
-        'user_id': str(user['_id'])
-    })
-
-    active_tokens = {}
-    if tokens_document:
-        active_tokens = tokens_document.get('active_tokens', {})
-
-    access_tokens = active_tokens.get('access_tokens', [])
-    refresh_tokens = active_tokens.get('refresh_tokens', [])
-
-    new_active_tokens = {
-        'access_tokens': access_tokens,
-        'refresh_tokens': refresh_tokens
+        'user_id': str(user['_id']),
     }
 
     if rf:
-        for active_token_model in new_active_tokens['refresh_tokens']:
-            if active_token_model['token'] != token:
-                continue
-            new_active_tokens['refresh_tokens'].remove(active_token_model)
+        where['refresh_token'] = token
     else:
-        for active_token_model in new_active_tokens['access_tokens']:
-            if active_token_model['token'] != token:
-                continue
-            new_active_tokens['access_tokens'].remove(active_token_model)
+        where['access_token'] = token
 
-    await db.active_tokens.update_one({
-        'membership_id': user['membership_id'],
-        'user_id': str(user['_id'])
-    }, {
-        '$set': {
-            'active_tokens': new_active_tokens
-        }
-    }, upsert=True)
+    await db.active_tokens.delete_one(where)
 
 
 async def generate_user_create_schema(membership_id, user_type_service, operation=OperationTypes.CREATE):

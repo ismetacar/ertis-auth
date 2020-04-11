@@ -12,6 +12,9 @@ APPLICATION_CREATE_SCHEMA = {
     'properties': {
         'name': {
             'type': 'string'
+        },
+        'role': {
+            'type': 'string'
         }
     },
     'required': [
@@ -102,7 +105,7 @@ async def update_application_with_body(db, application_id, membership_id, body):
 
 async def remove_application(db, membership_id, application_id):
     try:
-        await db.users.delete_one({
+        await db.applications.delete_one({
             '_id': maybe_object_id(application_id),
             'membership_id': membership_id
         })

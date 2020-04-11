@@ -15,19 +15,21 @@ from src.resources.user_types.user_types import (
 )
 from src.resources.user_types.validation import validate
 from src.utils.errors import ErtisError
+from src.utils.events import Event
 
 
 class UserTypeService(object):
     def __init__(self, db):
         self.db = db
 
-    async def create_user_type(self, resource, user, membership_id):
+    async def create_user_type(self, resource, utilizer, event_service):
+        membership_id = utilizer['membership_id']
         resource = slugify_name(resource)
         await ensure_user_type_not_exists(resource['slug'], membership_id, self.db)
 
         resource['_id'] = ObjectId()
         resource['sys'] = {
-            'created_by': user['username'],
+            'created_by': utilizer.get('username', utilizer.get('name')),
             'created_at': datetime.datetime.utcnow()
         }
 
@@ -39,12 +41,26 @@ class UserTypeService(object):
 
         await self.db.user_types.insert_one(resource)
 
+        resource['_id'] = str(resource['_id'])
+        await event_service.on_event((Event(**{
+            'document': resource,
+            'prior': {},
+            'utilizer': utilizer,
+            'type': 'UserTypeCreatedEvent',
+            'membership_id': utilizer['membership_id'],
+            'sys': {
+                'created_at': datetime.datetime.utcnow(),
+                'created_by': utilizer.get('username', utilizer.get('name'))
+            }
+        })))
+
         return resource
 
     async def get_user_type(self, membership_id, user_type_id=None):
         return await find_user_type(membership_id, self.db, user_type_id=user_type_id, raise_exec=True)
 
-    async def update_user_type(self, membership_id, user_type_id, data, user):
+    async def update_user_type(self, user_type_id, data, utilizer, event_service):
+        membership_id = utilizer['membership_id']
         resource = await self.get_user_type(membership_id, user_type_id=user_type_id)
 
         _resource = copy.deepcopy(resource)
@@ -63,11 +79,26 @@ class UserTypeService(object):
 
         resource['sys'].update({
             'modified_at': datetime.datetime.utcnow(),
-            'modified_by': user['username']
+            'modified_by': utilizer.get('username', utilizer.get('name'))
         })
 
         data['sys'] = resource['sys']
 
         resource = await update_user_type_with_body(self.db, user_type_id, membership_id, data)
+
+        resource['_id'] = str(resource['_id'])
+        _resource['_id'] = str(_resource['_id'])
+        await event_service.on_event((Event(**{
+            'document': resource,
+            'prior': _resource,
+            'utilizer': utilizer,
+            'type': 'UserTypeUpdatedEvent',
+            'membership_id': utilizer['membership_id'],
+            'sys': {
+                'created_at': datetime.datetime.utcnow(),
+                'created_by': utilizer.get('username', utilizer.get('name'))
+            }
+        })))
+
         return resource
 

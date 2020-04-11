@@ -12,7 +12,7 @@ from tests.helpers import (
 membership_doc, role_doc, user_doc = insert_mock_data()
 
 
-def test_user_crud_operations():
+def test_application_crud_operations():
     # region Create Application
     response = get_token(app, membership_doc, user_doc)
     token = response.json['access_token']

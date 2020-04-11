@@ -129,3 +129,5 @@ async def ensure_membership_is_exists(db, membership_id, user=None):
             err_msg="User is not permitted for membership: <{}>".format(membership_id),
             status_code=401
         )
+
+    return membership

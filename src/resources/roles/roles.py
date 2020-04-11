@@ -124,7 +124,7 @@ async def update_role_with_body(db, role_id, membership_id, body):
 
 async def remove_role(db, role_id, membership_id):
     try:
-        await db.rpşes.delete_one({
+        await db.roles.delete_one({
             '_id': maybe_object_id(role_id),
             'membership_id': membership_id
         })
@@ -138,3 +138,18 @@ async def remove_role(db, role_id, membership_id):
             },
             reason=str(e)
         )
+
+
+async def get_role_by_id(db, role_name, membership_id):
+    exists_role = await db.roles.find_one({
+        'name': role_name,
+        'membership_id': membership_id
+    })
+
+    if not exists_role:
+        raise ErtisError(
+            err_msg="Role not found by given _id: <{}> in membership".format(role_id),
+            err_code="errors.roleNotFoundError",
+            status_code=404
+        )
+    return exists_role

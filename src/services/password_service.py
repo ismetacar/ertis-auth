@@ -32,9 +32,9 @@ class PasswordService(object):
 
         await event_service.on_event(Event(**{
             'document': password_reset,
-            'user': user,
+            'prior': {},
+            'utilizer': user,
             'type': 'PasswordResetEvent',
-            'username': user['username'].lower(),
             'membership_id': user['membership_id'],
             'sys': {
                 'created_at': datetime.datetime.utcnow()
@@ -58,9 +58,9 @@ class PasswordService(object):
             reset_user_password(self.db, user, password),
             event_service.on_event(Event(**{
                 'document': user,
-                'user': user,
+                'prior': {},
+                'utilizer': user,
                 'type': 'PasswordResetEvent',
-                'username': user['username'].lower(),
                 'membership_id': user['membership_id'],
                 'sys': {
                     'created_at': datetime.datetime.utcnow()
@@ -98,13 +98,15 @@ class PasswordService(object):
             ),
             event_service.on_event(Event(**{
                 'document': user,
-                'user': user,
+                'prior': {},
+                'utilizer': user,
                 'type': 'PasswordChangedEvent',
-                'username': user['username'].lower(),
                 'membership_id': user['membership_id'],
                 'sys': {
                     'created_at': datetime.datetime.utcnow()
                 }
-            }))
+            })),
+            revoke_and_delete_old_active_tokens(user, self.db),
         )
+
         return

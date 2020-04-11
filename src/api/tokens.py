@@ -1,7 +1,7 @@
 import json
 from sanic import response
 from src.plugins.validator import validated
-from src.plugins.authorization import authorized
+from src.plugins.authorization import authorized, TokenTypes
 from src.resources.generic import ensure_membership_is_exists
 from src.resources.tokens.tokens import (
     SET_PASSWORD_SCHEMA,
@@ -19,15 +19,13 @@ def init_token_api(app, settings):
     @validated(CREATE_TOKEN_SCHEMA)
     async def create_token(request, **kwargs):
         body = request.json
-        auth_header = request.headers.get('authorization', None)
         membership_id = request.headers.get('x-ertis-alias', None)
 
-        await ensure_membership_is_exists(app.db, membership_id, user=None)
+        membership = await ensure_membership_is_exists(app.db, membership_id, user=None)
 
         result = await app.bearer_token_service.generate_token(
-            auth_header,
             settings,
-            membership_id,
+            membership,
             body,
             app.persist_event
         )
@@ -108,10 +106,10 @@ def init_token_api(app, settings):
 
     # region Change Password
     @app.route('/api/v1/change-password', methods=['POST'])
-    @authorized(app, settings, methods=['POST'])
+    @authorized(app, settings, methods=['POST'], allowed_token_types=[TokenTypes.BEARER])
     @validated(CHANGE_PASSWORD_SCHEMA)
     async def change_password(request, **kwargs):
-        user = request.ctx.user
+        user = request.ctx.utilizer
         body = request.json
         await app.password_service.change_password(body, user, app.persist_event)
 

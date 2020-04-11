@@ -264,3 +264,36 @@ def delete_role(app, membership, role_id, token):
     )
 
     return response
+
+
+def get_me(app, token):
+    request, response = app.test_client.delete(
+        '/api/v1/me',
+        headers={
+            'Authorization': 'Bearer {}'.format(token)
+        }
+    )
+
+    return response
+
+
+def please_refresh_token(app, r_token, a_token):
+    request, response = app.test_client.post(
+        '/api/v1/refres-token',
+        data=json.dumps({'token': r_token}),
+        headers={
+            'Authorization': 'Bearer {}'.format(a_token)
+        }
+    )
+
+    return response
+
+
+def revoke_token(app, r_token, a_token):
+    request, response = app.test_client.post(
+        '/api/v1/revoke-token',
+        data=json.dumps({'token': r_token}),
+        headers={
+            'Authorization': 'Bearer {}'.format(a_token)
+        }
+    )

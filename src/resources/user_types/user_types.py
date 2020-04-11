@@ -50,7 +50,7 @@ def fill_min_max_fields_if_not_given(resource):
             }
         )
 
-    for property, keywords in schema.get('properties', {}).items():
+    for prop, keywords in schema.get('properties', {}).items():
         property_type = keywords.get('type')
         if property_type == 'string':
             if 'minLength' not in keywords:
