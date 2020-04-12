@@ -23,4 +23,5 @@ test_config = {
     "major_version": 1,
     "minor_version": 4,
     "patch_version": 2,
+    "version": "1.4.2"
 }
