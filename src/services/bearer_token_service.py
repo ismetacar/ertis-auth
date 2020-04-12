@@ -144,7 +144,7 @@ class ErtisBearerTokenService(object):
 
     async def revoke_token(self, token, settings, event_service):
         user = await self.validate_token(token, settings['application_secret'], verify=True)
-        membership = self.db.memberships.find_one({
+        membership = await self.db.memberships.find_one({
             '_id': maybe_object_id(user['membership_id'])
         })
 
