@@ -104,12 +104,13 @@ class ErtisBearerTokenService(object):
                  })))]
 
         if revoke_flag:
+            now = datetime.datetime.utcnow()
             tasks.append(self.db.revoked_tokens.insert_one({
                 'token': refreshable_token,
                 'refreshable': user['decoded_token']['rf'],
-                'revoked_at': datetime.datetime.utcnow(),
-                'token_owner': user
-
+                'revoked_at': now,
+                'token_owner': user,
+                'expire_date': now + datetime.timedelta(0, membership['refresh_token_ttl'] * 60)
             }))
         await asyncio.gather(*tasks)
 
@@ -143,13 +144,18 @@ class ErtisBearerTokenService(object):
 
     async def revoke_token(self, token, settings, event_service):
         user = await self.validate_token(token, settings['application_secret'], verify=True)
+        membership = self.db.memberships.find_one({
+            '_id': maybe_object_id(user['membership_id'])
+        })
 
         await ensure_token_is_not_revoked(self.db, token)
+        now = datetime.datetime.utcnow()
         await self.db.revoked_tokens.insert_one({
             'token': token,
             'refreshable': user['decoded_token']['rf'],
-            'revoked_at': datetime.datetime.utcnow(),
-            'token_owner': user
+            'revoked_at': now,
+            'token_owner': user,
+            'expire_date': now + datetime.timedelta(0, membership['refresh_token_ttl'] * 60)
         })
 
         await remove_from_active_tokens(user, token, user['decoded_token']['rf'], self.db)

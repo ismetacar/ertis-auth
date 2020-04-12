@@ -294,19 +294,21 @@ async def reset_user_password(db, user, password):
     )
 
 
-async def insert_active_tokens(user, token_model, db):
+async def insert_active_tokens(user, token_model, membership, db):
     access_token = token_model['access_token']
     refresh_token = token_model['refresh_token']
     user_id = str(user['_id'])
     membership_id = str(user['membership_id'])
 
+    now = datetime.datetime.utcnow()
     active_access_token_document = {
         '_id': ObjectId(),
         'user_id': user_id,
         'type': 'access',
         'membership_id': membership_id,
         'token': access_token,
-        'access_created_at': datetime.datetime.utcnow()
+        'created_at': now,
+        'expire_date': now + datetime.timedelta(0, membership['token_ttl'] * 60)
     }
 
     active_refresh_token_document = {
@@ -315,7 +317,8 @@ async def insert_active_tokens(user, token_model, db):
         'type': 'refresh',
         'membership_id': membership_id,
         'token': refresh_token,
-        'refresh_created_at': datetime.datetime.utcnow()
+        'created_at': now,
+        'expire_date': now + datetime.timedelta(0, membership['refresh_token_ttl'] * 60)
     }
 
     await db.active_tokens.insert_one(active_access_token_document)
@@ -323,6 +326,10 @@ async def insert_active_tokens(user, token_model, db):
 
 
 async def revoke_and_delete_old_active_tokens(user, db):
+    membership = await db.memberships.find_one({
+        '_id': maybe_object_id(user['membership_id'])
+    })
+
     where = {
         'membership_id': user['membership_id'],
         'user_id': str(user['_id'])
@@ -332,11 +339,13 @@ async def revoke_and_delete_old_active_tokens(user, db):
     active_tokens_document = await active_tokens_document.to_list(length=None)
 
     for active_token in active_tokens_document:
+        now = datetime.datetime.utcnow()
         await db.revoked_tokens.insert_one({
             'token': active_token['token'],
             'refreshable': True if active_token['type'] == 'refresh' else False,
-            'revoked_at': datetime.datetime.utcnow(),
-            'token_owner': user
+            'revoked_at': now,
+            'token_owner': user,
+            'expire_date': now + datetime.timedelta(0, membership['refresh_token_ttl'] * 60)
         })
 
     await db.active_tokens.delete_many(where)

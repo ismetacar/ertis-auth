@@ -19,5 +19,8 @@ test_config = {
     "mail_username": "",
     "mail_password": "",
     "mail_use_tls": False,
-    "mail_use_ssl": True
+    "mail_use_ssl": True,
+    "major_version": 1,
+    "minor_version": 4,
+    "patch_version": 2,
 }
