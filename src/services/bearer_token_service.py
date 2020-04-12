@@ -58,7 +58,7 @@ class ErtisBearerTokenService(object):
             })))
         )
 
-        await insert_active_tokens(result[1], result[0], self.db)
+        await insert_active_tokens(result[1], result[0], membership, self.db)
         return result
 
     async def refresh_token(self, do_revoke, refreshable_token, settings, event_service):
@@ -115,7 +115,7 @@ class ErtisBearerTokenService(object):
         await asyncio.gather(*tasks)
 
         await remove_from_active_tokens(user, refreshable_token, user['decoded_token']['rf'], self.db)
-        await insert_active_tokens(user, refreshed_token, self.db)
+        await insert_active_tokens(user, refreshed_token, membership, self.db)
 
         return refreshed_token
 

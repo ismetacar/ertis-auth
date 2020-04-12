@@ -22,6 +22,6 @@ develop_config = {
     "mail_use_ssl": True,
     "major_version": 1,
     "minor_version": 4,
-    "patch_version": 2,
-    "version": "1.4.2"
+    "patch_version": 3,
+    "version": "1.4.3"
 }
