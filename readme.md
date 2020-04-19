@@ -78,6 +78,12 @@ All api endpoints developed by rest and http standards.
  | /api/v1/memberships/<membership_id>/events/_query                  |              POST             |
  | /api/v1/api-map                                                    |              GET              |
  | /api/v1/get-app-version                                            |              GET              |
+ |  /api/v1/memberships/<membership_id>/providers                     |              POST             |
+ |  /api/v1/memberships/<membership_id>/providers/<provider_id>       |              GET              |
+ |  /api/v1/memberships/<membership_id>/providers/<provider_id>       |              GET,PUT          |
+ |  /api/v1/memberships/<membership_id>/providers/<provider_id>       |              GET,PUT,DELETE   |
+ |  /api/v1/memberships/<membership_id>/providers/_query              |              POST             |
+ |  /api/v1/sign-in/<provider_slug>                                   |              GET              |
  
 ## Dockerized App
 - Working with mongodb.
