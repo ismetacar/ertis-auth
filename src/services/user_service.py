@@ -21,12 +21,13 @@ class UserService(object):
     def __init__(self, db):
         self.db = db
 
-    async def create_user(self, resource, membership_id, utilizer, user_type_service, event_service):
+    async def create_user(self, resource, membership_id, utilizer, user_type_service, event_service, creator=None):
         await validate_user_model_by_user_type(
             membership_id,
             resource,
             user_type_service,
-            operation=OperationTypes.CREATE
+            operation=OperationTypes.CREATE,
+            creator=creator
         )
         resource = prepare_user_fields(resource, membership_id, resource['password'])
         await ensure_email_and_username_available(self.db, resource)

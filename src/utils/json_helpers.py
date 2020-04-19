@@ -68,11 +68,15 @@ def bson_to_json(o):
     return default(o)
 
 
+def _parse_boolean(value):
+    if value in [True, 'True', '1', 1, 'true']:
+        return True
+    return False
+
+
 def parse_boolean(json_dict):
     for key, value in json_dict.items():
-        if value in [True, 'True', '1', 1, 'true']:
-            json_dict[key] = True
-
+        json_dict[key] = _parse_boolean(value)
         if value in [False, 'False', 0, 'false']:
             json_dict[key] = False
 

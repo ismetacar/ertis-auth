@@ -74,8 +74,8 @@ def prepare_user_fields(user, membership_id, password, opt='create'):
     if opt != 'create':
         return user
 
-    user['providers'] = []
-    user['email_verified'] = False
+    user['providers'] = user.get('providers', [])
+    user['email_verified'] = user.get('email_verified', False)
     user['membership_id'] = membership_id
     if password:
         user['password'] = hash_user_password(password)
@@ -365,7 +365,7 @@ async def remove_from_active_tokens(user, token, rf, db):
     await db.active_tokens.delete_one(where)
 
 
-async def generate_user_create_schema(membership_id, user_type_service, operation=OperationTypes.CREATE):
+async def generate_user_create_schema(membership_id, user_type_service, operation=OperationTypes.CREATE, creator=None):
     user_create_schema = {
         '$schema': 'http://json-schema.org/schema#',
         'type': 'object',
@@ -405,6 +405,19 @@ async def generate_user_create_schema(membership_id, user_type_service, operatio
         ]
     }
 
+    if creator == 'ERTIS':
+        user_create_schema['properties'].update({
+            'membership_id': {
+                'type': 'string'
+            },
+            'providers': {
+                'type': 'array'
+            },
+            'email_verified': {
+                'type': 'boolean'
+            }
+        })
+
     if operation == OperationTypes.UPDATE:
         user_create_schema['properties'].update({
             'ip_info': {
@@ -440,9 +453,9 @@ async def generate_user_create_schema(membership_id, user_type_service, operatio
     return user_create_schema
 
 
-async def validate_user_model_by_user_type(membership_id, payload, user_type_service, operation=OperationTypes.CREATE):
+async def validate_user_model_by_user_type(membership_id, payload, user_type_service, operation=OperationTypes.CREATE, creator=None):
     _payload = json.loads(json.dumps(payload, default=bson_to_json))
-    schema = await generate_user_create_schema(membership_id, user_type_service, operation=operation)
+    schema = await generate_user_create_schema(membership_id, user_type_service, operation=operation, creator=creator)
     try:
         validate(_payload, schema)
     except ValidationError as e:

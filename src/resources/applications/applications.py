@@ -35,7 +35,8 @@ def generate_random_string(length=10):
 
 async def ensure_name_is_unique_in_membership(db, application):
     exists_application = await db.applications.find_one({
-        'name': application['name']
+        'name': application['name'],
+        'membership_id': application['membership_id']
     })
 
     if exists_application:

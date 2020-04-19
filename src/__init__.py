@@ -43,4 +43,10 @@ def create_sanic_app(settings):
     from src.api.routes import init_routes_api
     init_routes_api(app, settings)
 
+    from src.api.providers import init_providers_api
+    init_providers_api(app, settings)
+
+    from src.api.provider_sign_in import init_provider_sign_in_api
+    init_provider_sign_in_api(app, settings)
+
     return app

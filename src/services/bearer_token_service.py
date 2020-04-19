@@ -24,7 +24,7 @@ class ErtisBearerTokenService(object):
     def __init__(self, db):
         self.db = db
 
-    async def generate_token(self, settings, membership, payload, event_service):
+    async def generate_token(self, settings, membership, payload, event_service, **kwargs):
         membership_id = str(membership['_id'])
         skip_auth = False
 
@@ -35,7 +35,8 @@ class ErtisBearerTokenService(object):
             'token_ttl': membership['token_ttl'],
             'refresh_token_ttl': membership['refresh_token_ttl'],
             'membership_id': membership_id,
-            'skip_auth': skip_auth
+            'skip_auth': skip_auth,
+            **kwargs
         }
 
         #: await all
@@ -247,6 +248,12 @@ class ErtisBearerTokenService(object):
             )
 
         if not kwargs.get('skip_auth', False):
+            if not user.get('password'):
+                raise ErtisError(
+                    err_code="errors.userShouldCreateANewPassword",
+                    err_msg="User should create a new password for generating token.",
+                    status_code=400
+                )
             if not bcrypt.verify(kwargs.get('body')["password"], user["password"]):
                 raise ErtisError(
                     status_code=403,

@@ -1,13 +1,13 @@
-import datetime
 import json
+
 from sanic import response
-from src.utils import query_helpers
-from src.plugins.validator import validated
-from src.utils.events import Event
-from src.utils.json_helpers import bson_to_json
+
 from src.plugins.authorization import authorized
+from src.plugins.validator import validated
 from src.resources.applications.applications import APPLICATION_CREATE_SCHEMA
 from src.resources.generic import QUERY_BODY_SCHEMA, ensure_membership_is_exists
+from src.utils import query_helpers
+from src.utils.json_helpers import bson_to_json
 
 
 def init_applications_api(app, settings):
