@@ -1,4 +1,6 @@
 # Ertis Auth
+v2.0.0
+
 Ertis auth is a next generation and generic auth service.
 
 You can manage your users, applications, roles and more.
