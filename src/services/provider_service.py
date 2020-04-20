@@ -45,9 +45,10 @@ class ProviderService(object):
 
         if not providers:
             providers.append({
-                'provider': exists_provider['slug'],
+                'provider': exists_provider['name'],
                 'token': token,
-                'user_id': provided_user['user_id']
+                'user_id': provided_user['user_id'],
+                'slug': exists_provider['slug']
             })
 
         else:
