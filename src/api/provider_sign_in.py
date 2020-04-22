@@ -36,9 +36,6 @@ def init_provider_sign_in_api(app, settings):
         if exists_user:
             affected_user = await app.provider_service.update_user(exists_user, exists_provider, token, user)
         else:
-            user['username'] = user['email']
-            user['password'] = ''
-            user['role'] = exists_provider['default_role']
             affected_user = await app.provider_service.create_user(user, exists_provider, token)
 
         result = await app.bearer_token_service.generate_token(

@@ -78,6 +78,10 @@ class ProviderService(object):
         return exists_user
 
     async def create_user(self, user, exists_provider, token):
+        user['username'] = user['email']
+        user['password'] = ''
+        user['role'] = exists_provider['default_role']
+
         user_type = await self.user_type_service.get_user_type(user['membership_id'])
         schema = user_type.get('schema', {})
         properties = schema.get('properties', {})
