@@ -43,24 +43,27 @@ class ProviderService(object):
     async def update_user(self, exists_user, exists_provider, token, provided_user):
         providers = exists_user.get('providers', [])
 
-        if not providers:
+        is_provider_found = False
+        for provider in providers:
+            if provider['slug'] != exists_provider['slug']:
+                continue
+            is_provider_found = True
+            break
+
+        if is_provider_found :
+            provider.update({
+                'provider_slug': exists_provider['slug'],
+                'provider_type': exists_provider['type'],
+                'token': token,
+                'user_id': provided_user['user_id']
+            })
+        else:
             providers.append({
                 'provider': exists_provider['name'],
                 'token': token,
                 'user_id': provided_user['user_id'],
                 'slug': exists_provider['slug']
             })
-
-        else:
-            for provider in providers:
-                if provider['slug'] != exists_provider['slug']:
-                    continue
-                provider.update({
-                    'provider_slug': exists_provider['slug'],
-                    'provider_type': exists_provider['type'],
-                    'token': token,
-                    'user_id': provided_user['user_id']
-                })
 
         await self.db.users.update_one({
             '_id': maybe_object_id(exists_user['_id']),
