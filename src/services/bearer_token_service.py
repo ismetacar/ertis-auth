@@ -24,6 +24,15 @@ class ErtisBearerTokenService(object):
     def __init__(self, db):
         self.db = db
 
+    @staticmethod
+    def verify_password(provided_password, password):
+        if not bcrypt.verify(provided_password, password):
+            raise ErtisError(
+                status_code=403,
+                err_code="errors.wrongUsernameOrPassword",
+                err_msg="Password mismatch"
+            )
+
     async def generate_token(self, settings, membership, payload, event_service, **kwargs):
         membership_id = str(membership['_id'])
         skip_auth = False
@@ -254,12 +263,8 @@ class ErtisBearerTokenService(object):
                     err_msg="User should create a new password for generating token.",
                     status_code=400
                 )
-            if not bcrypt.verify(kwargs.get('body')["password"], user["password"]):
-                raise ErtisError(
-                    status_code=403,
-                    err_code="errors.wrongUsernameOrPassword",
-                    err_msg="Password mismatch"
-                )
+
+            self.verify_password(kwargs.get('body')["password"], user["password"])
 
         payload = {
             'prn': str(user['_id']),
