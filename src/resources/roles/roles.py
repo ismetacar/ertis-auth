@@ -148,7 +148,7 @@ async def get_role_by_id(db, role_name, membership_id):
 
     if not exists_role:
         raise ErtisError(
-            err_msg="Role not found by given _id: <{}> in membership".format(role_id),
+            err_msg="Role not found by given _id: <{}> in membership".format(role_name),
             err_code="errors.roleNotFoundError",
             status_code=404
         )

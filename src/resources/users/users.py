@@ -79,7 +79,6 @@ def prepare_user_fields(user, membership_id, password, opt='create'):
     user['membership_id'] = membership_id
     if password:
         user['password'] = hash_user_password(password)
-    user['status'] = 'active'
 
     return user
 
@@ -401,7 +400,8 @@ async def generate_user_create_schema(membership_id, user_type_service, operatio
             'email',
             'firstname',
             'lastname',
-            'role'
+            'role',
+            'status'
         ]
     }
 

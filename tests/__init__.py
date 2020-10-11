@@ -9,7 +9,10 @@ db = MongoClient(host='mongodb://localhost:27017/ertis_auth_test').get_default_d
 
 def insert_mock_data():
     membership_doc = {
-        "name": "sample_membership"
+        "name": "sample_membership",
+        "token_ttl": 60,
+        "refresh_token_ttl": 120,
+        "max_token_count": 10
     }
 
     inserted_doc = db.memberships.insert_one(membership_doc)
@@ -61,20 +64,20 @@ def insert_mock_data():
 
 
 def remove_mock_data(membership, user, role):
-    db.memberships.remove({
+    db.memberships.delete_one({
         '_id': maybe_object_id(membership['_id'])
     })
 
-    db.users.remove({
+    db.users.delete_one({
         '_id': maybe_object_id(user['_id'])
     })
 
-    db.roles.remove({
+    db.roles.delete_one({
         '_id': maybe_object_id(role['_id'])
     })
 
 
 def remove_user_type(user_type_id):
-    db.user_types.remove({
+    db.user_types.delete_one({
         '_id': maybe_object_id(user_type_id)
     })

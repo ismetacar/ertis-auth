@@ -31,7 +31,7 @@ def test_auth_all_operations():
 
     # region Refresh Token
     response = please_refresh_token(app, _refresh_token, token)
-    assert response.status == 201
+    assert response.status == 200
     assert 'access_token' in response.json
     token = response.json['access_token']
     _refresh_token = response.json['refresh_token']

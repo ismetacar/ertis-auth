@@ -64,6 +64,7 @@ def create_user(app, membership, role, token):
             "firstname": "test",
             "lastname": "user",
             "role": role['slug'],
+            "status": "active",
             "email": "test@user.com",
             "photo_url": "http://test.com/user-profile/photos/photo.jpg",
             "profile_link": "http://test.com/user-profile"
@@ -126,7 +127,8 @@ def delete_user(app, membership, user, token):
 
 def create_application(app, membership, token):
     application_model = {
-        'name': 'test_application'
+        'name': 'test_application',
+        'role': 'admin-2'
     }
 
     headers = {
@@ -267,7 +269,7 @@ def delete_role(app, membership, role_id, token):
 
 
 def get_me(app, token):
-    request, response = app.test_client.delete(
+    request, response = app.test_client.get(
         '/api/v1/me',
         headers={
             'Authorization': 'Bearer {}'.format(token)
@@ -279,7 +281,7 @@ def get_me(app, token):
 
 def please_refresh_token(app, r_token, a_token):
     request, response = app.test_client.post(
-        '/api/v1/refres-token',
+        '/api/v1/refresh-token',
         data=json.dumps({'token': r_token}),
         headers={
             'Authorization': 'Bearer {}'.format(a_token)
@@ -297,3 +299,5 @@ def revoke_token(app, r_token, a_token):
             'Authorization': 'Bearer {}'.format(a_token)
         }
     )
+
+    return response
