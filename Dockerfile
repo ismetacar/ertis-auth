@@ -1,4 +1,4 @@
-FROM python:3.6.0-onbuild
+FROM python:3.8.3-buster
 WORKDIR /app
 ADD . /app
 RUN pip install -r /app/requirements.txt --ignore-installed
