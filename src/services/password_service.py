@@ -1,29 +1,30 @@
 import datetime
 import asyncio
+import json
+
 from src.resources.users.users import (
-    find_user_by_query,
     hash_user_password,
-    reset_user_password,
-    update_user_with_body,
     generate_password_reset_fields,
-    revoke_and_delete_old_active_tokens
+    check_expire_date_for_reset_token
 )
 from src.utils.errors import ErtisError
 from src.utils.events import Event
+from src.utils.json_helpers import maybe_object_id
 
 
 class PasswordService(object):
-    def __init__(self, db):
+    def __init__(self, db, user_service):
         self.db = db
+        self.user_service = user_service
 
     async def reset_password(self, payload, membership_id, event_service):
         email = payload['email'].lower()
 
-        user = await find_user_by_query(self.db, {'email': email, 'membership_id': membership_id})
+        user = await self._find_user_by_query({'email': email, 'membership_id': membership_id})
 
         password_reset = generate_password_reset_fields()
-        user = await update_user_with_body(
-            self.db, user['_id'], membership_id,
+        user = await self._set_reset_password_to_user(
+            user['_id'], membership_id,
             {
                 'reset_password': password_reset,
                 'ip_info': user.get('ip_info', {})
@@ -48,14 +49,14 @@ class PasswordService(object):
         password = payload['password']
         reset_token = payload['reset_token']
 
-        user = await find_user_by_query(self.db, {
+        user = await self._find_user_by_query({
             'email': email,
             'reset_password.reset_token': reset_token,
             'membership_id': membership_id
         })
 
         await asyncio.gather(
-            reset_user_password(self.db, user, password),
+            self._reset_user_password(user, password),
             event_service.on_event(Event(**{
                 'document': user,
                 'prior': {},
@@ -68,8 +69,7 @@ class PasswordService(object):
             }))
         )
 
-        await revoke_and_delete_old_active_tokens(user, self.db)
-        return
+        await self.user_service.revoke_and_delete_old_active_tokens(user)
 
     async def change_password(self, payload, user, event_service):
         user_id = payload.get('user_id')
@@ -92,8 +92,8 @@ class PasswordService(object):
 
         hashed_password = hash_user_password(password)
         await asyncio.gather(
-            update_user_with_body(
-                self.db, user_id, user['membership_id'],
+            self.user_service.update_user_with_body(
+                user_id, user['membership_id'],
                 {'password': hashed_password, 'ip_info': user.get('ip_info', {})}
             ),
             event_service.on_event(Event(**{
@@ -106,7 +106,78 @@ class PasswordService(object):
                     'created_at': datetime.datetime.utcnow()
                 }
             })),
-            revoke_and_delete_old_active_tokens(user, self.db),
+            self.user_service.revoke_and_delete_old_active_tokens(user),
         )
 
-        return
+    async def _set_reset_password_to_user(self, user_id, membership_id, reset_password_model):
+        try:
+            await self.db.users.update_one(
+                {
+                    '_id': maybe_object_id(user_id),
+                    'membership_id': membership_id
+                },
+                {
+                    '$set': reset_password_model
+                }
+            )
+        except Exception as e:
+            raise ErtisError(
+                err_code="errors.errorOccurredWhileUpdatingUser",
+                err_msg="An error occurred while updating user with provided body",
+                status_code=500,
+                context={
+                    'provided_body': reset_password_model
+                },
+                reason=str(e)
+            )
+
+        user = await self.db.users.find_one({
+            '_id': maybe_object_id(user_id),
+            'membership_id': membership_id
+        })
+
+        if not user:
+            raise ErtisError(
+                err_msg="User not found in db by given _id: <{}>".format(user_id),
+                err_code="errors.userNotFound",
+                status_code=404
+            )
+
+        return user
+
+    async def _find_user_by_query(self, where):
+        users = await self.db.users.find(where).to_list(length=None)
+        if not users:
+            raise ErtisError(
+                err_msg="User not found by given query <{}>".format(json.dumps(where)),
+                err_code="errors.userNotFound",
+                status_code=404
+            )
+
+        return users[0]
+
+    async def _reset_user_password(self, user, password):
+        is_expired = check_expire_date_for_reset_token(user['reset_password']['expire_date'])
+
+        if is_expired:
+            raise ErtisError(
+                err_msg="Provided password reset token has expired",
+                err_code="errors.passwordResetTokenHasExpired",
+                status_code=400
+            )
+
+        new_password = hash_user_password(password)
+
+        await self.db.users.update_one(
+            {
+                '_id': maybe_object_id(user['_id'])
+            },
+            {
+                '$set': {
+                    'password': new_password
+                },
+                '$unset': {
+                    'reset_password': 1
+                }
+            }
+        )

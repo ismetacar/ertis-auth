@@ -3,15 +3,12 @@ import datetime
 from bson import ObjectId
 from src.resources.generic import query
 from src.resources.roles.roles import (
-    find_role,
-    remove_role,
     generate_slug,
-    check_slug_conflict,
-    update_role_with_body,
     pop_non_updatable_fields
 )
 from src.utils.errors import ErtisError
 from src.utils.events import Event
+from src.utils.json_helpers import maybe_object_id
 
 
 class RoleService(object):
@@ -22,7 +19,7 @@ class RoleService(object):
         resource = generate_slug(data)
         resource['membership_id'] = utilizer['membership_id']
 
-        role = await check_slug_conflict(self.db, resource)
+        role = await self._check_slug_conflict(resource)
         role['_id'] = ObjectId()
         role['sys'] = {
             'created_at': datetime.datetime.utcnow(),
@@ -45,13 +42,30 @@ class RoleService(object):
 
         return role
 
-    async def get_role(self, resource_id, user):
-        return await find_role(self.db, resource_id, user['membership_id'])
+    async def get_role(self, role_id, membership_id):
+        role = await self._find_role(role_id, membership_id)
+
+        if not role:
+            raise ErtisError(
+                err_msg="Role not found by given _id: <{}> in membership".format(role_id),
+                err_code="errors.roleNotFoundError",
+                status_code=404
+            )
+
+        return role
+
+    async def get_role_by_slug(self, slug, membership_id):
+        role = await self.db.roles.find_one({
+            'slug': slug,
+            'membership_id': membership_id
+        })
+
+        return role
 
     async def update_role(self, resource_id, data, utilizer, event_service):
         provided_body = pop_non_updatable_fields(data)
 
-        resource = await find_role(self.db, resource_id, utilizer['membership_id'])
+        resource = await self.get_role(resource_id, utilizer['membership_id'])
         _resource = copy.deepcopy(resource)
         _resource.update(provided_body)
         if _resource == resource:
@@ -68,7 +82,7 @@ class RoleService(object):
 
         provided_body['sys'] = resource['sys']
 
-        updated_role = await update_role_with_body(self.db, resource_id, utilizer['membership_id'], provided_body)
+        updated_role = await self._update_role_with_body(resource_id, utilizer['membership_id'], provided_body)
 
         updated_role['_id'] = str(updated_role['_id'])
         _resource['_id'] = str(_resource['_id'])
@@ -88,8 +102,8 @@ class RoleService(object):
         return updated_role
 
     async def delete_role(self, resource_id, utilizer, event_service):
-        role = await self.get_role(resource_id, utilizer)
-        await remove_role(self.db, resource_id, utilizer['membership_id'])
+        role = await self.get_role(resource_id, utilizer["membership_id"])
+        await self._remove_role(resource_id, utilizer['membership_id'])
 
         role['_id'] = str(role['_id'])
         await event_service.on_event((Event(**{
@@ -106,3 +120,75 @@ class RoleService(object):
 
     async def query_roles(self, membership_id, where, select, limit, skip, sort):
         return await query(self.db, membership_id, where, select, limit, skip, sort, 'roles')
+
+    async def _update_role_with_body(self, role_id, membership_id, body):
+        try:
+            await self.db.roles.update_one(
+                {
+                    '_id': maybe_object_id(role_id),
+                    'membership_id': membership_id
+                },
+                {
+                    '$set': body
+                }
+            )
+        except Exception as e:
+            raise ErtisError(
+                err_code="errors.errorOccurredWhileUpdatingRole",
+                err_msg="An error occurred while updating role with provided body",
+                status_code=500,
+                context={
+                    'provided_body': body
+                },
+                reason=str(e)
+            )
+
+        role = await self._find_role(role_id, membership_id)
+        return role
+
+    async def _find_role(self, role_id, membership_id):
+        role = await self.db.roles.find_one({
+            '_id': maybe_object_id(role_id),
+            'membership_id': membership_id
+        })
+
+        if not role:
+            raise ErtisError(
+                err_msg="Role not found by given id: <{}> in membership".format(role_id),
+                err_code="errors.roleNotFoundError",
+                status_code=404
+            )
+
+        return role
+
+    async def _remove_role(self, role_id, membership_id):
+        try:
+            await self.db.roles.delete_one({
+                '_id': maybe_object_id(role_id),
+                'membership_id': membership_id
+            })
+        except Exception as e:
+            raise ErtisError(
+                err_msg="An error occurred while deleting role",
+                err_code="errors.errorOccurredWhileDeletingRole",
+                status_code=500,
+                context={
+                    'role_id': role_id
+                },
+                reason=str(e)
+            )
+
+    async def _check_slug_conflict(self, role):
+        existing_role = await self.db.roles.find_one({
+            'slug': role['slug'],
+            'membership_id': role['membership_id']
+        })
+
+        if existing_role:
+            raise ErtisError(
+                err_code="errors.roleSlugAlreadyUsing",
+                err_msg="Role slug already using",
+                status_code=409
+            )
+
+        return role

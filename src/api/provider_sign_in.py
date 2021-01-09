@@ -38,7 +38,7 @@ def init_provider_sign_in_api(app, settings):
         else:
             affected_user = await app.provider_service.create_user(user, exists_provider, token)
 
-        result = await app.bearer_token_service.generate_token(
+        token = await app.bearer_token_service.generate_token(
             settings,
             membership,
             affected_user,
@@ -46,4 +46,4 @@ def init_provider_sign_in_api(app, settings):
             skip_auth=True
         )
 
-        return response.json(json.loads(json.dumps(result[0], default=bson_to_json)), 201)
+        return response.json(json.loads(json.dumps(token, default=bson_to_json)), 201)

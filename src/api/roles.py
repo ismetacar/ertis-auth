@@ -28,7 +28,7 @@ def init_roles_api(app, settings):
     @authorized(app, settings, methods=['GET'], required_permission='roles.read')
     async def get_role(request, membership_id, role_id, **kwargs):
         await ensure_membership_is_exists(app.db, membership_id, request.ctx.utilizer)
-        resource = await app.role_service.get_role(role_id, request.ctx.utilizer)
+        resource = await app.role_service.get_role(role_id, membership_id)
 
         return response.json(json.loads(json.dumps(resource, default=bson_to_json)), 200)
 

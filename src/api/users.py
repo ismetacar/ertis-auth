@@ -3,6 +3,7 @@ from sanic import response
 
 from src.utils import query_helpers
 from src.plugins.validator import validated
+from src.utils.errors import ErtisError
 from src.utils.json_helpers import bson_to_json
 from src.plugins.authorization import authorized
 from src.resources.generic import QUERY_BODY_SCHEMA, ensure_membership_is_exists
@@ -37,6 +38,17 @@ def init_users_api(app, settings):
     async def update_user(request, membership_id, user_id, *args, **kwargs):
         await ensure_membership_is_exists(app.db, membership_id, request.ctx.utilizer)
         body = request.json
+        if body.get("password"):
+            raise ErtisError(
+                err_msg="User password can not updatable with UpdateUser endpoint.",
+                err_code="errors.passwordCanNotUpdated",
+                status_code=301,
+                context={
+                    "from": f"/api/v1/memberships/{membership_id}/users/{user_id}",
+                    "to": "/api/v1/change-password"
+                }
+            )
+
         resource = await app.user_service.update_user(user_id, body, request.ctx.utilizer, app.user_type_service, app.persist_event)
 
         return response.json(json.loads(json.dumps(resource, default=bson_to_json)), 200)

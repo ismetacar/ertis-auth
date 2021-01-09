@@ -110,6 +110,7 @@ def generate_token(payload, secret, token_ttl, refresh_token_ttl):
     refresh_token_payload = copy.deepcopy(payload)
     refresh_token_payload['exp'] = _get_exp(refresh_token_ttl)
     refresh_token_payload['rf'] = True
+
     return {
         'access_token': jwt.encode(payload=payload, key=secret, algorithm='HS256').decode('utf-8'),
         'expires_in': token_ttl * 60,

@@ -23,14 +23,14 @@ def init_token_api(app, settings):
 
         membership = await ensure_membership_is_exists(app.db, membership_id, user=None)
 
-        result = await app.bearer_token_service.generate_token(
+        token = await app.bearer_token_service.generate_token(
             settings,
             membership,
             body,
             app.persist_event
         )
 
-        return response.json(json.loads(json.dumps(result[0], default=bson_to_json)), 201)
+        return response.json(json.loads(json.dumps(token, default=bson_to_json)), 201)
 
     # endregion
 
