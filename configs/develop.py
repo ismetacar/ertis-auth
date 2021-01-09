@@ -5,7 +5,7 @@ develop_config = {
     "application_secret": "AtqVaL11EHVPEpbu2mr0yZgKXj1BnRj0",
     "default_database": "ertis_auth_test",
     "verify_token": True,
-    "error_handler": False,
+    "error_handler": True,
     "debug": True,
     "host": "0.0.0.0",
     "port": 8888,

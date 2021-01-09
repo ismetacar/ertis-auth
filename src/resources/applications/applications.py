@@ -15,7 +15,7 @@ APPLICATION_CREATE_SCHEMA = {
         }
     },
     'required': [
-        'name'
+        'name', "role"
     ]
 }
 

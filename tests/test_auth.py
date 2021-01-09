@@ -1,47 +1,59 @@
+import json
+
 from run import app
 from tests import insert_mock_data, remove_mock_data
-from tests.helpers import (
-    get_token,
-    please_refresh_token,
-    get_me,
-    revoke_token
-)
+from tests.helpers import get_token
 
 membership_doc, role_doc, user_doc = insert_mock_data()
 
 
-def test_auth_all_operations():
-    # region Generate Token
+def test_generate_token():
     response = get_token(app, membership_doc, user_doc)
-
     assert response.status == 201
     assert 'access_token' in response.json
-    token = response.json['access_token']
-    _refresh_token = response.json['refresh_token']
-    # endregion
+    assert 'refresh_token' in response.json
 
-    # region Get Me
 
-    response = get_me(app, token)
-
+def test_get_me():
+    token = get_token(app, membership_doc, user_doc)
+    token = token.json["access_token"]
+    request, response = app.test_client.get(
+        '/api/v1/me',
+        headers={
+            'Authorization': 'Bearer {}'.format(token)
+        }
+    )
     assert response.status == 200
-    user = response.json
 
-    # endregion
 
-    # region Refresh Token
-    response = please_refresh_token(app, _refresh_token, token)
+def test_refresh_token():
+    token = get_token(app, membership_doc, user_doc)
+    a_token = token.json["access_token"]
+    r_token = token.json["refresh_token"]
+    request, response = app.test_client.post(
+        '/api/v1/refresh-token',
+        data=json.dumps({'token': r_token}),
+        headers={
+            'Authorization': 'Bearer {}'.format(a_token)
+        }
+    )
+
     assert response.status == 200
     assert 'access_token' in response.json
-    token = response.json['access_token']
-    _refresh_token = response.json['refresh_token']
+    assert 'refresh_token' in response.json
 
-    # endregion
 
-    # region Revoke Token
-    response = revoke_token(app, _refresh_token, token)
+def test_revoke_token():
+    token = get_token(app, membership_doc, user_doc)
+    a_token = token.json["access_token"]
+    r_token = token.json["refresh_token"]
+
+    request, response = app.test_client.post(
+        '/api/v1/revoke-token',
+        data=json.dumps({'token': r_token}),
+        headers={
+            'Authorization': 'Bearer {}'.format(a_token)
+        }
+    )
+
     assert response.status is 204
-
-    # endregion
-    remove_mock_data(membership_doc, user_doc, role_doc)
-
