@@ -92,7 +92,7 @@ All api endpoints developed by rest and http standards.
 - Just docker-compose up.
 - Docker compose with mongo and ertis auth.
 - Setup db first -> migrate db easily. 
->[Go to setup step](setup)
+>[Go to setup step](https://pypi.org/project/ertis-auth-migrate/)
  
 ## API Documentation
 - Strong api documentation with samples
