@@ -89,4 +89,4 @@ def parse(request):
     limit = get_limit(request)
     sort = get_sort(request)
     skip = get_skip(request)
-    return where, select, limit, sort, skip
+    return where, select, limit, skip, sort

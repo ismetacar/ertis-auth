@@ -66,14 +66,14 @@ def init_providers_api(app, settings):
     @validated(QUERY_BODY_SCHEMA)
     async def query_providers(request, membership_id, **kwargs):
         await ensure_membership_is_exists(app.db, membership_id, request.ctx.utilizer)
-        where, select, limit, sort, skip = query_helpers.parse(request)
+        where, select, limit, skip, sort = query_helpers.parse(request)
         providers, count = await app.provider_service.query_providers(
             membership_id,
             where,
             select,
             limit,
-            sort,
-            skip
+            skip,
+            sort
         )
         response_json = json.loads(json.dumps({
             'data': {

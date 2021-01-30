@@ -65,7 +65,7 @@ def init_applications_api(app, settings):
     @validated(QUERY_BODY_SCHEMA)
     async def query_applications(request, membership_id, **kwargs):
         await ensure_membership_is_exists(app.db, membership_id, request.ctx.utilizer)
-        where, select, limit, sort, skip = query_helpers.parse(request)
+        where, select, limit, skip, sort = query_helpers.parse(request)
         applications, count = await app.application_service.query_applications(
             membership_id,
             where,

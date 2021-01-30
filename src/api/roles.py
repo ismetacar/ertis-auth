@@ -62,7 +62,7 @@ def init_roles_api(app, settings):
     async def query_roles(request, membership_id, **kwargs):
         await ensure_membership_is_exists(app.db, membership_id, request.ctx.utilizer)
 
-        where, select, limit, sort, skip = query_helpers.parse(request)
+        where, select, limit, skip, sort = query_helpers.parse(request)
         roles, count = await app.role_service.query_roles(membership_id, where, select, limit, skip, sort)
         response_json = json.loads(json.dumps({
             'data': {
