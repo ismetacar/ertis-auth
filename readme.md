@@ -94,7 +94,12 @@ All api endpoints developed by rest and http standards.
 - Setup db first -> migrate db easily. 
 >[Go to setup step](https://pypi.org/project/ertis-auth-migrate/)
 > (Ertis Auth Migrate pypi package)
- 
+
+### Up
+```bash
+$ docker run -p 8888:8888 -d --env-file .env ertis_auth
+```
+ > Ertis auth have a public docker image on docker hub.
 ## API Documentation
 - Strong api documentation with samples
 > [Postman Collection](https://www.getpostman.com/collections/c0a5139f97737444948f)
