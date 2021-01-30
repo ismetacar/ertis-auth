@@ -9,6 +9,6 @@ class EventService(object):
     async def get_event(self, event_id, membership_id):
         return await find_event(self.db, membership_id, event_id)
 
-    async def query_events(self, membership_id, where, select, limit, sort, skip):
+    async def query_events(self, membership_id, where, select, limit, skip, sort):
         events, count = await query(self.db, membership_id, where, select, limit, skip, sort, 'events')
         return events, count

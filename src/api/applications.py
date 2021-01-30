@@ -71,8 +71,8 @@ def init_applications_api(app, settings):
             where,
             select,
             limit,
-            sort,
-            skip
+            skip,
+            sort
         )
         response_json = json.loads(json.dumps({
             'data': {

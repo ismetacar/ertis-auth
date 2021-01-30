@@ -50,7 +50,7 @@ def _pre_process_where(where):
     return normalized_where
 
 
-async def query(db, membership_id=None, where=None, select=None, limit=None, sort=None, skip=None, collection=None):
+async def query(db, membership_id=None, where=None, select=None, limit=None, skip=None, sort=None, collection=None):
     try:
         where = _pre_process_where(where)
         if not membership_id:
