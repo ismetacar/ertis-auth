@@ -20,14 +20,14 @@ def init_routes_api(app, settings):
     # endregion
 
     # region Get App Version
-    @app.route('/api/v1/get-app-version')
+    @app.route('/api/v1/app-version')
     async def get_app_version(request):
         response = {
             'app_name': 'Ertis Auth',
             'version': {
-                'major': settings['major_version'],
-                'minor': settings['minor_version'],
-                'patch': settings['patch_version']
+                'major': 2,
+                'minor': 0,
+                'patch': 1
             }
         }
 

@@ -21,7 +21,7 @@ def init_user_types_api(app, settings):
     # endregion
 
     # region Get User Type of Membership
-    @app.route('/api/v1/memberships/<membership_id>/get-user-type', methods=['GET'])
+    @app.route('/api/v1/memberships/<membership_id>/user-type', methods=['GET'])
     @authorized(app, settings, methods=['GET'])
     async def get_user_type_of_membership(request, membership_id, *args, **kwargs):
         await ensure_membership_is_exists(app.db, membership_id, request.ctx.utilizer)
