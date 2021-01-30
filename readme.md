@@ -1,3 +1,5 @@
+[![Pypi](https://img.shields.io/pypi/v/ertis-auth-migrate?color=%2334D058&label=pypi)](https://pypi.org/project/ertis-auth-migrate/) [![Docker Automated build](https://img.shields.io/static/v1?label=docker%20build&message=automated&color=brightgreen)](https://hub.docker.com/repository/docker/ismetacar/ertis_auth/general)
+
 # Ertis Auth
 v2.0.0
 
