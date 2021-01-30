@@ -47,7 +47,7 @@ All api endpoints developed by rest and http standards.
 
 
  | Endpoint Path                                                      |       Allowed Methods         |
- |:-------------------------------------------------------------------|--------------------------------|
+ |:-------------------------------------------------------------------|-------------------------------|
  | /api/v1/healthcheck                                                |              GET              |
  | /api/v1/generate-token                                             |              POST             |
  | /api/v1/refresh-token                                              |              POST             |
@@ -80,12 +80,12 @@ All api endpoints developed by rest and http standards.
  | /api/v1/memberships/<membership_id>/events/_query                  |              POST             |
  | /api/v1/api-map                                                    |              GET              |
  | /api/v1/get-app-version                                            |              GET              |
- |  /api/v1/memberships/<membership_id>/providers                     |              POST             |
- |  /api/v1/memberships/<membership_id>/providers/<provider_id>       |              GET              |
- |  /api/v1/memberships/<membership_id>/providers/<provider_id>       |              GET,PUT          |
- |  /api/v1/memberships/<membership_id>/providers/<provider_id>       |              GET,PUT,DELETE   |
- |  /api/v1/memberships/<membership_id>/providers/_query              |              POST             |
- |  /api/v1/sign-in/<provider_slug>                                   |              GET              |
+ | /api/v1/memberships/<membership_id>/providers                      |              POST             |
+ | /api/v1/memberships/<membership_id>/providers/<provider_id>        |              GET              |
+ | /api/v1/memberships/<membership_id>/providers/<provider_id>        |              GET,PUT          |
+ | /api/v1/memberships/<membership_id>/providers/<provider_id>        |              GET,PUT,DELETE   |
+ | /api/v1/memberships/<membership_id>/providers/_query               |              POST             |
+ | /api/v1/sign-in/<provider_slug>                                    |              GET              |
  
 ## Dockerized App
 - Working with mongodb.
@@ -99,11 +99,16 @@ All api endpoints developed by rest and http standards.
 ```bash
 $ docker run -p 8888:8888 -d --env-file .env ertis_auth
 ```
+
+Note: All values in the configuration file can be overridden by environment variables. 
+Environment variables must be defined with the AUTH_ prefix -i.e see .env file- on when they are defined.
+
  > Ertis auth have a public docker image on docker hub.
 ## API Documentation
 - Strong api documentation with samples
 > [Postman Collection](https://www.getpostman.com/collections/c0a5139f97737444948f)
 > [Postman Documentation](https://documenter.getpostman.com/view/1905307/TW6xp8cY)
+
 ## Tests and continuous delivery 
 - All automated unit and integration tests.
 - Just call `$ pytest test.py` on your pipeline.
