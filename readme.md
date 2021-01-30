@@ -98,7 +98,7 @@ All api endpoints developed by rest and http standards.
 ## API Documentation
 - Strong api documentation with samples
 > [Postman Collection](https://www.getpostman.com/collections/c0a5139f97737444948f)
-
+> [Postman Documentation](https://documenter.getpostman.com/view/1905307/TW6xp8cY)
 ## Tests and continuous delivery 
 - All automated unit and integration tests.
 - Just call `$ pytest test.py` on your pipeline.
