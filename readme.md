@@ -103,7 +103,7 @@ $ docker run -p 8888:8888 -d --env-file .env ertis_auth
 Note: All values in the configuration file can be overridden by environment variables. 
 Environment variables must be defined with the AUTH_ prefix -i.e see .env file- on when they are defined.
 
- > Ertis auth have a public docker image on docker hub.
+ > Ertis auth have a public docker [image](https://hub.docker.com/repository/docker/ismetacar/ertis_auth/general) on docker hub.
 ## API Documentation
 - Strong api documentation with samples
 > [Postman Collection](https://www.getpostman.com/collections/c0a5139f97737444948f)
