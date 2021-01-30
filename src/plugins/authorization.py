@@ -6,6 +6,11 @@ from src.utils.errors import ErtisError
 from src.utils.security_helpers import implies_any
 
 
+class UtilizerTypes(enum.Enum):
+    USER = 0
+    APPLICATION = 1
+
+
 class TokenTypes(enum.Enum):
     BEARER = 0
     BASIC = 1
@@ -82,10 +87,13 @@ def authorized(app, settings, methods=None, required_permission=None, allowed_to
                         err_msg="Invalid authorization header provided",
                         status_code=401
                     )
+
+                utilizer_type = UtilizerTypes.USER
                 utilizer = user
 
             elif token_type == TokenTypes.BASIC:
                 application = await app.basic_token_service.validate_token(token)
+                utilizer_type = UtilizerTypes.APPLICATION
                 utilizer = application
 
             else:
@@ -99,7 +107,11 @@ def authorized(app, settings, methods=None, required_permission=None, allowed_to
                 await ensure_utilizer_is_permitted(app.db, utilizer, required_permission)
 
             kwargs['utilizer'] = utilizer
+            kwargs['utilizer_type'] = utilizer_type
+
+            request.ctx.utilizer_type = utilizer_type
             request.ctx.utilizer = utilizer
+
             response = await f(request, *args, **kwargs)
             return response
 

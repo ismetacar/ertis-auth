@@ -30,6 +30,23 @@ class ErtisBasicTokenService(object):
 
         return application
 
+    async def me(self, application):
+        app_role = await self.db.roles.find_one({
+            'slug': application['role'],
+            'membership_id': application['membership_id']
+        })
+
+        user_permissions = app_role.get('permissions', []) if app_role else []
+        application['role_permissions'] = user_permissions
+
+        membership = await self.db.memberships.find_one({
+            '_id': maybe_object_id(application['membership_id'])
+        })
+
+        application['membership'] = membership
+        application.pop('membership_id', None)
+        return application
+
     async def get_application(self, application_id):
         application = await self.db.applications.find_one({
             '_id': maybe_object_id(application_id)
