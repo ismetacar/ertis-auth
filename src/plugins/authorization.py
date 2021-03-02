@@ -21,19 +21,7 @@ def get_token_string(auth_header):
     return token
 
 
-async def ensure_utilizer_is_permitted(db, utilizer, required_permission):
-    role = await db.roles.find_one({
-        'slug': utilizer.get('role'),
-        'membership_id': utilizer.get('membership_id')
-    })
-
-    if not role:
-        raise ErtisError(
-            err_code="errors.permissionDenied",
-            err_msg="Permission denied for this action <{}>".format(required_permission),
-            status_code=403
-        )
-
+async def ensure_utilizer_is_permitted(role, required_permission):
     permissions = role.get('permissions', [])
     has_permission = implies_any(permissions, required_permission)
     if not has_permission:
@@ -42,6 +30,22 @@ async def ensure_utilizer_is_permitted(db, utilizer, required_permission):
             err_msg="Permission denied for this action <{}>".format(required_permission),
             status_code=403
         )
+
+
+async def get_role(db, utilizer):
+    role = await db.roles.find_one({
+        'slug': utilizer.get('role'),
+        'membership_id': utilizer.get('membership_id')
+    })
+
+    if not role:
+        raise ErtisError(
+            err_code="errors.permissionDenied",
+            err_msg="Permission denied for this action, note: role not found",
+            status_code=404
+        )
+
+    return role
 
 
 def authorized(app, settings, methods=None, required_permission=None, allowed_token_types=None):
@@ -103,8 +107,11 @@ def authorized(app, settings, methods=None, required_permission=None, allowed_to
                     status_code=401
                 )
 
+            utilizer_role = await get_role(app.db, utilizer)
+            utilizer['role_definition'] = utilizer_role
+
             if required_permission:
-                await ensure_utilizer_is_permitted(app.db, utilizer, required_permission)
+                await ensure_utilizer_is_permitted(utilizer_role, required_permission)
 
             kwargs['utilizer'] = utilizer
             kwargs['utilizer_type'] = utilizer_type

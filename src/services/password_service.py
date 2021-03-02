@@ -76,7 +76,7 @@ class PasswordService(object):
         password = payload.get('password')
         password_confirm = payload.get('password_confirm')
 
-        if user_id != str(user['_id']):
+        if not (user['role_definition']['membership_owner'] or user_id == str(user['_id'])):
             raise ErtisError(
                 err_msg="User cannot change other users password",
                 err_code="errors.userCannotChangeOthersPassword",

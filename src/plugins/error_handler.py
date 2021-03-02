@@ -62,9 +62,10 @@ class CustomErrorHandler(ErrorHandler):
             )
 
         else:
-            exc_info = (type(exception), exception, exception.__traceback__)
-            extra = _request_debug_info(request) if request else dict()
-            self.sentry_client.captureException(exc_info, extra=extra)
+            if self.settings['sentry_activate']:
+                exc_info = (type(exception), exception, exception.__traceback__)
+                extra = _request_debug_info(request) if request else dict()
+                self.sentry_client.captureException(exc_info, extra=extra)
             return response.json(
                 body={
                     'err_msg': "{} - {}".format(type(exception).__name__, str(exception)),

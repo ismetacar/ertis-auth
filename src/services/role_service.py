@@ -21,6 +21,7 @@ class RoleService(object):
 
         role = await self._check_slug_conflict(resource)
         role['_id'] = ObjectId()
+        role['membership_owner'] = resource.get('membership_owner', False)
         role['sys'] = {
             'created_at': datetime.datetime.utcnow(),
             'created_by': utilizer.get('username', utilizer.get('name'))

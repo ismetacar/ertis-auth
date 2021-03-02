@@ -36,8 +36,9 @@ class ErtisBasicTokenService(object):
             'membership_id': application['membership_id']
         })
 
-        user_permissions = app_role.get('permissions', []) if app_role else []
-        application['role_permissions'] = user_permissions
+        role_permissions = app_role.get('permissions', []) if app_role else []
+        application['role_permissions'] = role_permissions
+        application['membership_owner'] = app_role.get('membership_owner')
 
         membership = await self.db.memberships.find_one({
             '_id': maybe_object_id(application['membership_id'])
@@ -45,6 +46,7 @@ class ErtisBasicTokenService(object):
 
         application['membership'] = membership
         application.pop('membership_id', None)
+        application.pop('role_definition', None)
         return application
 
     async def get_application(self, application_id):

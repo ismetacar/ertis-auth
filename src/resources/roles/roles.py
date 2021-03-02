@@ -44,7 +44,9 @@ ROLE_CRETE_SCHEMA = {
             'type': 'array',
             'items': PERMISSION_SCHEMA
         },
-
+        'membership_owner': {
+            'type': 'boolean'
+        }
     }
 }
 
