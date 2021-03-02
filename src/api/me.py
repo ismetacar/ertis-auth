@@ -1,6 +1,6 @@
 import json
 from sanic import response
-from src.plugins.authorization import authorized, TokenTypes, UtilizerTypes
+from src.plugins.authorization import authorized, UtilizerTypes
 from src.utils.errors import ErtisError
 from src.utils.json_helpers import bson_to_json
 
