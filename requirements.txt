@@ -27,7 +27,7 @@ multidict==4.5.2
 packaging==20.4
 passlib==1.7.1
 pluggy==0.13.1
-py==1.9.0
+py==1.10.0
 pycparser==2.19
 PyJWT==1.7.1
 pymongo==3.8.0
