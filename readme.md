@@ -1,6 +1,6 @@
 [![Pypi](https://img.shields.io/pypi/v/ertis-auth-migrate?color=%2334D058&label=pypi)](https://pypi.org/project/ertis-auth-migrate/) [![Docker Automated build](https://img.shields.io/static/v1?label=docker%20build&message=automated&color=brightgreen)](https://hub.docker.com/repository/docker/ismetacar/ertis_auth/general)
 
-# Ertis Auth
+# Ertis Auth [![Tweet](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)](https://twitter.com/intent/tweet?text=Explore%20new%20minimal%20authentication%20and%20authorization%20service%20|%20Ertis%20Auth&url=https://github.com/ismetacar/ertis-auth&hashtags=auth,restapi,oauth2,github,developers,ertis)
 v2.0.1
 
 Ertis auth is a next generation and generic auth service.
