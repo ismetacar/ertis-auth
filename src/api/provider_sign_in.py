@@ -1,6 +1,7 @@
 import json
 
 from sanic import response
+from sanic_openapi import doc
 
 from src.resources.generic import ensure_membership_is_exists
 from src.resources.providers.facebook import validate_with_facebook
@@ -16,6 +17,8 @@ VALIDATION_LOOKUP = {
 
 def init_provider_sign_in_api(app, settings):
     @app.route('/api/v1/sign-up/<provider_slug>')
+    @doc.tag("Social Login")
+    @doc.operation("Login")
     async def sign_in_with(request, provider_slug, *args, **kwargs):
         membership_id = request.headers.get('x-ertis-alias', None)
         membership = await ensure_membership_is_exists(app.db, membership_id, user=None)

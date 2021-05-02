@@ -43,14 +43,8 @@ class ProviderService(object):
     async def update_user(self, exists_user, exists_provider, token, provided_user):
         providers = exists_user.get('providers', [])
 
-        is_provider_found = False
-        for provider in providers:
-            if provider['slug'] != exists_provider['slug']:
-                continue
-            is_provider_found = True
-            break
-
-        if is_provider_found :
+        provider = next(filter(lambda x: x["slug"] == exists_provider["slug"], providers), None)
+        if provider:
             provider.update({
                 'provider_slug': exists_provider['slug'],
                 'provider_type': exists_provider['type'],

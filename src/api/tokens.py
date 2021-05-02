@@ -1,7 +1,11 @@
 import json
 from sanic import response
+from sanic_openapi import doc
+
 from src.plugins.validator import validated
 from src.plugins.authorization import authorized, TokenTypes
+from src.request_models.tokens import GenerateToken, RefreshToken, VerifyToken, RevokeToken, ResetPassword, SetPassword, \
+    ChangePassword
 from src.resources.generic import ensure_membership_is_exists
 from src.resources.tokens.tokens import (
     SET_PASSWORD_SCHEMA,
@@ -16,6 +20,10 @@ from src.utils.json_helpers import bson_to_json
 def init_token_api(app, settings):
     # region Generate Token
     @app.route('/api/v1/generate-token', methods=['POST'])
+    @doc.tag("Tokens")
+    @doc.operation("Create Token")
+    @doc.consumes(GenerateToken, location="body", content_type="application/json")
+    @doc.consumes(doc.String(name="X-Ertis-Alias"), location="header", required=True)
     @validated(CREATE_TOKEN_SCHEMA)
     async def create_token(request, **kwargs):
         body = request.json
@@ -36,6 +44,9 @@ def init_token_api(app, settings):
 
     # region Refresh Token
     @app.route('/api/v1/refresh-token', methods=['POST'])
+    @doc.tag("Tokens")
+    @doc.operation("Refresh Token")
+    @doc.consumes(RefreshToken, location="body", content_type="application/json")
     @validated(REFRESH_TOKEN_SCHEMA)
     async def refresh_token(request, **kwargs):
         body = request.json
@@ -55,6 +66,9 @@ def init_token_api(app, settings):
 
     # region Verify Token
     @app.route('/api/v1/verify-token', methods=['POST'])
+    @doc.tag("Tokens")
+    @doc.operation("Verify Token")
+    @doc.consumes(VerifyToken, location="body", content_type="application/json")
     @validated(REFRESH_TOKEN_SCHEMA)
     async def verify_token(request, **kwargs):
         body = request.json
@@ -68,6 +82,9 @@ def init_token_api(app, settings):
 
     # region Revoke Token
     @app.route('/api/v1/revoke-token', methods=['POST'])
+    @doc.tag("Tokens")
+    @doc.operation("Revoke Token")
+    @doc.consumes(RevokeToken, location="body", content_type="application/json")
     @validated(REFRESH_TOKEN_SCHEMA)
     async def revoke_token(request, **kwargs):
         body = request.json
@@ -80,6 +97,10 @@ def init_token_api(app, settings):
 
     # region Reset Password
     @app.route('/api/v1/reset-password', methods=['POST'])
+    @doc.tag("Password")
+    @doc.operation("Reset Password")
+    @doc.consumes(ResetPassword, location="body", content_type="application/json")
+    @doc.consumes(doc.String(name="X-Ertis-Alias"), location="header", required=True)
     @validated(RESET_PASSWORD_SCHEMA)
     async def reset_password(request, **kwargs):
         membership_id = request.headers.get('x-ertis-alias', None)
@@ -93,6 +114,10 @@ def init_token_api(app, settings):
 
     # region Set New Password
     @app.route('/api/v1/set-password', methods=['POST'])
+    @doc.tag("Password")
+    @doc.operation("Set New Password")
+    @doc.consumes(SetPassword, location="body", content_type="application/json")
+    @doc.consumes(doc.String(name="X-Ertis-Alias"), location="header", required=True)
     @validated(SET_PASSWORD_SCHEMA)
     async def set_password(request, **kwargs):
         membership_id = request.headers.get('x-ertis-alias', None)
@@ -106,6 +131,9 @@ def init_token_api(app, settings):
 
     # region Change Password
     @app.route('/api/v1/change-password', methods=['POST'])
+    @doc.tag("Password")
+    @doc.operation("Change Password")
+    @doc.consumes(ChangePassword, location="body", content_type="application/json")
     @authorized(app, settings, methods=['POST'], allowed_token_types=[TokenTypes.BEARER])
     @validated(CHANGE_PASSWORD_SCHEMA)
     async def change_password(request, **kwargs):

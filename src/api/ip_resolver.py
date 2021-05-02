@@ -1,4 +1,5 @@
 from sanic.response import json
+from sanic_openapi import doc
 
 from src.plugins.resolve_ip import resolve_ip
 from src.utils.country_info import all_countries
@@ -6,6 +7,8 @@ from src.utils.country_info import all_countries
 
 def init_ip_resolver_api(app, settings):
     @app.route('/api/v1/ip-resolver', methods=['GET'])
+    @doc.tag("Ip Resolver")
+    @doc.operation("Resolve Ip")
     @resolve_ip()
     async def ip_resolver(request, **kwargs):
         ip_info = kwargs.get('ip_info', {})

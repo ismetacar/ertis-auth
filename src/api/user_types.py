@@ -1,7 +1,10 @@
 import json
 from sanic import response
+from sanic_openapi import doc
+
 from src.plugins.authorization import authorized
 from src.plugins.validator import validated
+from src.request_models.user_types import UserType
 from src.resources.generic import ensure_membership_is_exists
 from src.resources.user_types.validation import CREATE_SCHEMA
 from src.utils.json_helpers import bson_to_json
@@ -10,6 +13,9 @@ from src.utils.json_helpers import bson_to_json
 def init_user_types_api(app, settings):
     # region Create User Type
     @app.route('/api/v1/memberships/<membership_id>/user-types', methods=['POST'])
+    @doc.tag("User Types")
+    @doc.operation("Create User Type")
+    @doc.consumes(UserType, location="body", content_type="application/json")
     @authorized(app, settings, methods=['POST'], required_permission='user_types.create')
     @validated(CREATE_SCHEMA)
     async def create_user_type(request, membership_id, *args, **kwargs):
@@ -22,6 +28,8 @@ def init_user_types_api(app, settings):
 
     # region Get User Type of Membership
     @app.route('/api/v1/memberships/<membership_id>/user-type', methods=['GET'])
+    @doc.tag("User Types")
+    @doc.operation("Get User Types")
     @authorized(app, settings, methods=['GET'])
     async def get_user_type_of_membership(request, membership_id, *args, **kwargs):
         await ensure_membership_is_exists(app.db, membership_id, request.ctx.utilizer)
@@ -31,6 +39,8 @@ def init_user_types_api(app, settings):
 
     # region Get User Type By Id
     @app.route('/api/v1/memberships/<membership_id>/user-types/<user_type_id>', methods=['GET'])
+    @doc.tag("User Types")
+    @doc.operation("Get User Type")
     @authorized(app, settings, methods=['GET'])
     async def get_user_type(request, membership_id, user_type_id, *args, **kwargs):
         await ensure_membership_is_exists(app.db, membership_id, request.ctx.utilizer)
@@ -41,6 +51,9 @@ def init_user_types_api(app, settings):
 
     # region Update User Type
     @app.route('/api/v1/memberships/<membership_id>/user-types/<user_type_id>', methods=['PUT'])
+    @doc.tag("User Types")
+    @doc.operation("Update User Type")
+    @doc.consumes(UserType, location="body", content_type="application/json")
     @authorized(app, settings, methods=['PUT'])
     async def update_user_type(request, membership_id, user_type_id, *args, **kwargs):
         await ensure_membership_is_exists(app.db, membership_id, request.ctx.utilizer)

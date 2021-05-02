@@ -1,5 +1,7 @@
 import json
 from sanic import response
+from sanic_openapi import doc
+
 from src.plugins.authorization import authorized, UtilizerTypes
 from src.utils.errors import ErtisError
 from src.utils.json_helpers import bson_to_json
@@ -8,6 +10,8 @@ from src.utils.json_helpers import bson_to_json
 def init_me_api(app, settings):
     # region ME Api
     @app.route('/api/v1/me', methods=['GET'])
+    @doc.tag("Me/WhoAmI")
+    @doc.operation("Get User Detail")
     @authorized(app, settings, methods=['GET'])
     async def me_api(request, **kwargs):
         if request.ctx.utilizer_type == UtilizerTypes.USER:

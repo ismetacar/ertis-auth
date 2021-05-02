@@ -2,13 +2,18 @@ import logging
 
 from sanic import Sanic
 
+from src.api import init_swagger
+
 
 def create_sanic_app(settings):
     app = Sanic(load_env='AUTH_')
+
     app.logger = logging.getLogger('create_app')
 
     for key in settings.keys():
         settings[key] = getattr(app.config, key.upper(), settings[key])
+
+    init_swagger(app, settings)
 
     from src.plugins import init_plugins
     init_plugins(app, settings)

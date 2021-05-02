@@ -62,6 +62,14 @@ def authorized(app, settings, methods=None, required_permission=None, allowed_to
                 response = await f(request, *args, **kwargs)
                 return response
             auth_header = request.headers.get('authorization')
+
+            if not auth_header:
+                raise ErtisError(
+                    err_msg="Authorization header must be starts with Bearer or Basic",
+                    err_code="errors.badRequest",
+                    status_code=400
+                )
+
             if auth_header.startswith('Bearer '):
                 token_type = TokenTypes.BEARER
             elif auth_header.startswith('Basic '):

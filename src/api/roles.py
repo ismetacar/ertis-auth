@@ -1,5 +1,9 @@
 import json
 from sanic import response
+from sanic_openapi import doc
+
+from src.request_models.query_model import Query
+from src.request_models.roles import Role
 from src.utils import query_helpers
 from src.plugins.validator import validated
 from src.utils.json_helpers import bson_to_json
@@ -11,6 +15,9 @@ from src.resources.roles.roles import ROLE_CRETE_SCHEMA
 def init_roles_api(app, settings):
     # region Create Role
     @app.route('/api/v1/memberships/<membership_id>/roles', methods=['POST'])
+    @doc.tag("Roles")
+    @doc.operation("Create Role")
+    @doc.consumes(Role, location="body", content_type="application/json")
     @authorized(app, settings, methods=['POST'], required_permission='roles.create')
     @validated(ROLE_CRETE_SCHEMA)
     async def create_role(request, membership_id, **kwargs):
@@ -25,6 +32,8 @@ def init_roles_api(app, settings):
 
     # region Get Role
     @app.route('/api/v1/memberships/<membership_id>/roles/<role_id>', methods=['GET'])
+    @doc.tag("Roles")
+    @doc.operation("Get Role")
     @authorized(app, settings, methods=['GET'], required_permission='roles.read')
     async def get_role(request, membership_id, role_id, **kwargs):
         await ensure_membership_is_exists(app.db, membership_id, request.ctx.utilizer)
@@ -36,6 +45,9 @@ def init_roles_api(app, settings):
 
     # region Update Role
     @app.route('/api/v1/memberships/<membership_id>/roles/<role_id>', methods=['PUT'])
+    @doc.tag("Roles")
+    @doc.operation("Update Role")
+    @doc.consumes(Role, location="body", content_type="application/json")
     @authorized(app, settings, methods=['PUT'], required_permission='roles.update')
     async def update_role(request, membership_id, role_id, **kwargs):
         await ensure_membership_is_exists(app.db, membership_id, request.ctx.utilizer)
@@ -47,6 +59,8 @@ def init_roles_api(app, settings):
 
     # region Delete Role
     @app.route('/api/v1/memberships/<membership_id>/roles/<role_id>', methods=['DELETE'])
+    @doc.tag("Roles")
+    @doc.operation("Delete Role")
     @authorized(app, settings, methods=['DELETE'], required_permission='roles.delete')
     async def delete_role(request, membership_id, role_id, **kwargs):
         await ensure_membership_is_exists(app.db, membership_id, request.ctx.utilizer)
@@ -57,6 +71,9 @@ def init_roles_api(app, settings):
 
     # region Query Roles
     @app.route('/api/v1/memberships/<membership_id>/roles/_query', methods=['POST'])
+    @doc.tag("Roles")
+    @doc.operation("Query Roles")
+    @doc.consumes(Query, location="body", content_type="application/json")
     @authorized(app, settings, methods=['POST'], required_permission='roles.read')
     @validated(QUERY_BODY_SCHEMA)
     async def query_roles(request, membership_id, **kwargs):
