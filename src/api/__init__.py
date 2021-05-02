@@ -18,5 +18,4 @@ def init_swagger(app, settings):
         'displayRequestDuration': True
     }
 
-    app.config["API_BASEPATH"] = "/api"
-    app.config["API_HOST"] = settings["host"]
+    app.config["API_BASEPATH"] = "/"
