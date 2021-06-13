@@ -40,6 +40,7 @@ class ErtisBearerTokenService(object):
             membership_id
         )
 
+        await self._check_max_token_count(user, membership)
         self._check_user_status(user)
 
         token = await self._craft_token(user, **token_generation_parameters)
@@ -384,3 +385,14 @@ class ErtisBearerTokenService(object):
                 err_code="errors.wrongUsernameOrPassword",
                 err_msg="Password mismatch"
             )
+
+    async def _check_max_token_count(self, user, membership):
+        max_token_count = membership.get("max_token_count", None)
+        if max_token_count:
+            active_tokens_of_user = await self.db.active_tokens.count_documents({"user_id": str(user["_id"]), "type": "access"})
+            if active_tokens_of_user >= max_token_count:
+                raise ErtisError(
+                    err_msg="Max token count limit exceeded!",
+                    err_code="errors.maxTokenCountLimitExceeded",
+                    status_code=403
+                )
