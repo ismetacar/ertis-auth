@@ -38,6 +38,7 @@ def parse_date(text):
     formats = [
         '%Y-%m-%d',
         '%Y-%m-%dT%H:%M:%S.%fZ',
+        '%Y-%m-%d %H:%M:%S.%fZ',
         '%Y-%m-%dT%H:%M:%S',
         '%Y-%m-%dT%H:%M:%SZ'
     ]

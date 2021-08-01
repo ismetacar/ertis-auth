@@ -3,8 +3,8 @@ import enum
 from pymongo.errors import OperationFailure
 
 from src.utils.errors import ErtisError
-from src.utils.json_helpers import maybe_object_id
-
+from src.utils.json_helpers import maybe_object_id, object_hook, bson_to_json
+import json
 
 class OperationTypes(enum.Enum):
     CREATE = 1
@@ -46,7 +46,8 @@ def normalize_ids(where):
 
 
 def _pre_process_where(where):
-    normalized_where = normalize_ids(where)
+    with_normalized_ids = normalize_ids(where)
+    normalized_where = json.loads(json.dumps(with_normalized_ids, default=bson_to_json), object_hook=object_hook)
     return normalized_where
 
 
