@@ -64,7 +64,7 @@ SET_PASSWORD_SCHEMA = {
         }
     },
     'required': [
-        'email', 'password', 'reset_token'
+        'password', 'reset_token'
     ]
 }
 
