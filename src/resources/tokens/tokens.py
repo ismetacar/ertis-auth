@@ -56,10 +56,6 @@ SET_PASSWORD_SCHEMA = {
     '$schema': 'http://json-schema.org/schema#',
     'type': 'object',
     'properties': {
-        'email': {
-            'type': 'string',
-            'format': 'email'
-        },
         'password': {
             'type': 'string'
         },

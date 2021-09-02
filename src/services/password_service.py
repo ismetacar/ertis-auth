@@ -50,7 +50,6 @@ class PasswordService(object):
         reset_token = payload['reset_token']
 
         user = await self._find_user_by_query({
-            'email': email,
             'reset_password.reset_token': reset_token,
             'membership_id': membership_id
         })
@@ -94,7 +93,8 @@ class PasswordService(object):
         await asyncio.gather(
             self.user_service.update_user_with_body(
                 user_id, user['membership_id'],
-                {'password': hashed_password, 'ip_info': user.get('ip_info', {})}
+                {'password': hashed_password,
+                    'ip_info': user.get('ip_info', {})}
             ),
             event_service.on_event(Event(**{
                 'document': user,
@@ -138,7 +138,8 @@ class PasswordService(object):
 
         if not user:
             raise ErtisError(
-                err_msg="User not found in db by given _id: <{}>".format(user_id),
+                err_msg="User not found in db by given _id: <{}>".format(
+                    user_id),
                 err_code="errors.userNotFound",
                 status_code=404
             )
@@ -149,7 +150,8 @@ class PasswordService(object):
         users = await self.db.users.find(where).to_list(length=None)
         if not users:
             raise ErtisError(
-                err_msg="User not found by given query <{}>".format(json.dumps(where)),
+                err_msg="User not found by given query <{}>".format(
+                    json.dumps(where)),
                 err_code="errors.userNotFound",
                 status_code=404
             )
@@ -157,7 +159,8 @@ class PasswordService(object):
         return users[0]
 
     async def _reset_user_password(self, user, password):
-        is_expired = check_expire_date_for_reset_token(user['reset_password']['expire_date'])
+        is_expired = check_expire_date_for_reset_token(
+            user['reset_password']['expire_date'])
 
         if is_expired:
             raise ErtisError(
