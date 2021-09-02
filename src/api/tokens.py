@@ -108,7 +108,7 @@ def init_token_api(app, settings):
         await ensure_membership_is_exists(app.db, membership_id, user=None)
 
         user = await app.password_service.reset_password(body, membership_id, app.persist_event)
-        return response.json(user['reset_password'], 200)
+        return response.json(json.loads(json.dumps(user['reset_password'], default=bson_to_json)), 200)
 
     # endregion
 
