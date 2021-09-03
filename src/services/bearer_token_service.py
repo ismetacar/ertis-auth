@@ -95,22 +95,25 @@ class ErtisBearerTokenService(object):
         tasks = [
             self._update_user_with_token(refreshed_token, user),
             event_service.on_event((Event(**{
-                 'document': refreshed_token,
-                 'prior': {},
-                 'utilizer': user,
-                 'type': 'TokenRefreshedEvent',
-                 'membership_id': user['membership_id'],
-                 'sys': {
-                     'created_at': datetime.datetime.utcnow()
-                 }
-             })))
+                'document': refreshed_token,
+                'prior': {},
+                'utilizer': user,
+                'type': 'TokenRefreshedEvent',
+                'membership_id': user['membership_id'],
+                'sys': {
+                    'created_at': datetime.datetime.utcnow()
+                }
+            })))
         ]
 
         if revoke_flag:
-            tasks.append(self.revoke_token(refreshable_token, settings, event_service, user=user))
+            tasks.append(self.revoke_token(refreshable_token,
+                         settings, event_service, user=user))
 
-        tasks.append(self._remove_from_active_tokens(user, refreshable_token, user['decoded_token']['rf']))
-        tasks.append(self._insert_active_tokens(user, refreshed_token, membership))
+        tasks.append(self._remove_from_active_tokens(
+            user, refreshable_token, user['decoded_token']['rf']))
+        tasks.append(self._insert_active_tokens(
+            user, refreshed_token, membership))
 
         await asyncio.gather(*tasks)
 
@@ -138,6 +141,46 @@ class ErtisBearerTokenService(object):
         }))
 
         return token_response
+
+    async def revoke_tokens(self, user, event_service):
+        # get all acitve tokens
+        tokens = await self.db.active_tokens.find({
+            'user_id': str(user['_id'])
+        }).to_list(None)
+
+        membership = await self.db.memberships.find_one({
+            '_id': maybe_object_id(user['membership_id'])
+        })
+        now = datetime.datetime.utcnow()
+
+        # insert to revoked tokens
+        will_be_revoked = []
+        for token in tokens:
+            will_be_revoked.append({
+                'token': token['token'],
+                'refreshable': True if token["type"] == "refresh" else False,
+                'revoked_at': datetime.datetime.utcnow(),
+                'token_owner': user,
+                'expire_date': now + datetime.timedelta(0, membership['refresh_token_ttl'] * 60)
+            })
+
+        await self.db.revoked_tokens.insert_many(will_be_revoked)
+
+        # remove all tokens from active tokens
+        await self.db.active_tokens.delete_many({
+            'user_id': str(user['_id'])
+        })
+
+        await event_service.on_event(Event(**{
+            'document': {'tokens': [token_doc["token"] for token_doc in will_be_revoked]},
+            'prior': {},
+            'utilizer': user,
+            'type': 'TokensRevokedEvent',
+            'membership_id': user['membership_id'],
+            'sys': {
+                'created_at': datetime.datetime.utcnow()
+            }
+        }))
 
     async def revoke_token(self, token, settings, event_service, user=None):
         if not user:
@@ -179,7 +222,8 @@ class ErtisBearerTokenService(object):
             'membership_id': user['membership_id']
         })
 
-        user_permissions = user_role.get('permissions', []) if user_role else []
+        user_permissions = user_role.get(
+            'permissions', []) if user_role else []
         user['role_permissions'] = user_permissions
 
         user['membership_owner'] = user_role.get('membership_owner')
@@ -197,7 +241,8 @@ class ErtisBearerTokenService(object):
 
     async def validate_token(self, token, secret, verify):
         try:
-            decoded = jwt.decode(token, key=secret, algorithms='HS256', verify=verify)
+            decoded = jwt.decode(
+                token, key=secret, algorithms='HS256', verify=verify)
 
         except ExpiredSignatureError as e:
             raise ErtisError(
@@ -242,7 +287,8 @@ class ErtisBearerTokenService(object):
                     status_code=400
                 )
 
-            self._verify_password(kwargs.get('body')["password"], user["password"])
+            self._verify_password(kwargs.get(
+                'body')["password"], user["password"])
 
         payload = {
             'prn': str(user['_id']),
@@ -271,7 +317,8 @@ class ErtisBearerTokenService(object):
         if not user:
             raise ErtisError(
                 err_code="errors.UserNotFound",
-                err_msg="User not found in db by given username: <{}>".format(username),
+                err_msg="User not found in db by given username: <{}>".format(
+                    username),
                 status_code=401
             )
 
@@ -372,7 +419,8 @@ class ErtisBearerTokenService(object):
     def _check_user_status(user):
         if not user.get('status', None) or user['status'] not in ['active', 'warning']:
             raise ErtisError(
-                err_msg="User status: <{}> is not valid to generate token".format(user.get('status', None)),
+                err_msg="User status: <{}> is not valid to generate token".format(
+                    user.get('status', None)),
                 err_code="errors.userStatusIsNotValid",
                 status_code=401
             )

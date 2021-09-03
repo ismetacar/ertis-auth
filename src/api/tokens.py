@@ -93,6 +93,15 @@ def init_token_api(app, settings):
 
         return response.json({}, 204)
 
+    @app.route('/api/v1/revoke-tokens', methods=['GET'])
+    @doc.tag("Tokens")
+    @doc.operation("Revoke Tokens")
+    @authorized(app, settings, methods=['GET'], allowed_token_types=[TokenTypes.BEARER])
+    async def revoke_tokens(request, **kwargs):
+        await app.bearer_token_service.revoke_tokens(request.ctx.utilizer, app.persist_event)
+
+        return response.json({}, 204)
+
     # endregion
 
     # region Reset Password
