@@ -45,7 +45,6 @@ class PasswordService(object):
         return user
 
     async def set_password(self, payload, membership_id, event_service):
-        email = payload['email'].lower()
         password = payload['password']
         reset_token = payload['reset_token']
 
