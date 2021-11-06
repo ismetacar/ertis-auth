@@ -244,7 +244,7 @@ class UserService(object):
                 'token': active_token['token'],
                 'refreshable': True if active_token['type'] == 'refresh' else False,
                 'revoked_at': now,
-                'token_owner': user,
+                'user_id': str(user["_id"]),
                 'expire_date': now + datetime.timedelta(0, membership['refresh_token_ttl'] * 60)
             })
 

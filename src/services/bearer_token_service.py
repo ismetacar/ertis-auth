@@ -160,7 +160,7 @@ class ErtisBearerTokenService(object):
                 'token': token['token'],
                 'refreshable': True if token["type"] == "refresh" else False,
                 'revoked_at': datetime.datetime.utcnow(),
-                'token_owner': user,
+                'user_id': str(user["_id"]),
                 'expire_date': now + datetime.timedelta(0, membership['refresh_token_ttl'] * 60)
             })
 
@@ -196,7 +196,7 @@ class ErtisBearerTokenService(object):
             'token': token,
             'refreshable': user['decoded_token']['rf'],
             'revoked_at': now,
-            'token_owner': user,
+            'user_id': str(user["_id"]),
             'expire_date': now + datetime.timedelta(0, membership['refresh_token_ttl'] * 60)
         })
 
