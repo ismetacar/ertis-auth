@@ -110,10 +110,8 @@ class ErtisBearerTokenService(object):
             tasks.append(self.revoke_token(refreshable_token,
                          settings, event_service, user=user))
 
-        tasks.append(self._remove_from_active_tokens(
-            user, refreshable_token, user['decoded_token']['rf']))
-        tasks.append(self._insert_active_tokens(
-            user, refreshed_token, membership))
+        tasks.append(self._remove_from_active_tokens(user, refreshable_token))
+        tasks.append(self._insert_active_tokens(user, refreshed_token, membership))
 
         await asyncio.gather(*tasks)
 
@@ -143,7 +141,7 @@ class ErtisBearerTokenService(object):
         return token_response
 
     async def revoke_tokens(self, user, event_service):
-        # get all acitve tokens
+        # get all active tokens
         tokens = await self.db.active_tokens.find({
             'user_id': str(user['_id'])
         }).to_list(None)
@@ -200,7 +198,7 @@ class ErtisBearerTokenService(object):
             'expire_date': now + datetime.timedelta(0, membership['refresh_token_ttl'] * 60)
         })
 
-        await self._remove_from_active_tokens(user, token, user['decoded_token']['rf'])
+        await self._remove_from_active_tokens(user, token)
 
         await asyncio.gather(
             self._update_user_token_status(user, token, 'revoked'),
@@ -380,16 +378,12 @@ class ErtisBearerTokenService(object):
             }
         )
 
-    async def _remove_from_active_tokens(self, user, token, rf):
+    async def _remove_from_active_tokens(self, user, token):
         where = {
             'membership_id': user['membership_id'],
             'user_id': str(user['_id']),
+            'token': token
         }
-
-        if rf:
-            where['refresh_token'] = token
-        else:
-            where['access_token'] = token
 
         await self.db.active_tokens.delete_one(where)
 
