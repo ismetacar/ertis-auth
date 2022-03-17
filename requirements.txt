@@ -40,7 +40,7 @@ raven==6.10.0
 raven-aiohttp==0.7.0
 requests==2.22.0
 rfc3986==1.4.0
-sanic==20.6.3
+sanic==20.12.6
 sanic-mongo==1.7.1
 sanic-sentry-error-handler==0.1.7
 sentry-sdk==0.10.2
