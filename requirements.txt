@@ -50,7 +50,7 @@ text-unidecode==1.2
 toml==0.10.1
 typing-extensions==3.7.4
 ua-parser==0.8.0
-ujson==5.1.0
+ujson==5.2.0
 urllib3==1.26.5
 user-agents==2.0
 uvloop==0.14.0
