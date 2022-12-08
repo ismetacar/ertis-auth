@@ -3,7 +3,7 @@ aiohttp==3.7.4
 async-timeout==3.0.1
 attrs==19.1.0
 bcrypt==3.1.6
-certifi==2019.6.16
+certifi==2022.12.7
 cffi==1.14.5
 chardet==3.0.4
 coverage==5.3
